@@ -20,11 +20,7 @@ class RepairSmsNotifier implements RepairNotifier {
   @override
   Future<void> notifyStatusChange(RepairJob job) async {
     try {
-      // [DEBUG] Confirm trigger fires
-      debugPrint('[DEBUG] SMS TRIGGER: status changed to ${job.status.name} for job ${job.jobNumber}');
-
       if (job.customerPhone.isEmpty) {
-        debugPrint('[DEBUG] SMS TRIGGER: Customer phone is empty, skipping.');
         return;
       }
 
@@ -37,7 +33,6 @@ class RepairSmsNotifier implements RepairNotifier {
 
       if (message != null) {
         // Fetch store name
-        debugPrint('[DEBUG] SMS TRIGGER: Fetching store name...');
         final storeNameEither = await _settingsRepository.getSetting('store_name').timeout(
           const Duration(seconds: 5),
           onTimeout: () {
@@ -45,7 +40,6 @@ class RepairSmsNotifier implements RepairNotifier {
           },
         );
         final storeName = storeNameEither.fold((l) => 'Our Store', (r) => r ?? 'Our Store');
-        debugPrint('[DEBUG] SMS TRIGGER: Store name fetched: $storeName');
 
         // Replace placeholders
         message = message
@@ -56,7 +50,6 @@ class RepairSmsNotifier implements RepairNotifier {
             .replaceAll('{final_cost}', (job.finalCost ?? job.estimatedCost ?? 0.0).toStringAsFixed(2));
 
         // Send SMS
-        debugPrint('[DEBUG] SMS TRIGGER: Calling sendSms...');
         final result = await _smsGateway.sendSms(toPhone: job.customerPhone, message: message);
         
         // Log errors but don't throw, as SMS failure shouldn't fail the repair update
@@ -66,8 +59,7 @@ class RepairSmsNotifier implements RepairNotifier {
         );
       }
     } catch (e, st) {
-      debugPrint('[CRITICAL DEBUG] UNHANDLED EXCEPTION IN notifyStatusChange: $e');
-      debugPrint('[CRITICAL DEBUG] STACKTRACE: $st');
+      debugPrint('SMS Notifier Exception: $e');
     }
   }
 }
