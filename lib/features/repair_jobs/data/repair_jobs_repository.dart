@@ -171,7 +171,9 @@ class RepairJobsRepository {
     try {
       final now = DateTime.now();
       
-      return await _db.transaction(() async {
+      bool shouldNotify = false;
+      
+      final updatedEither = await _db.transaction(() async {
         final currentJob = await (_db.select(_db.repairJobs)..where((t) => t.id.equals(id))).getSingle();
         
         DateTime? deliveredAt = currentJob.deliveredAt;
@@ -199,17 +201,18 @@ class RepairJobsRepository {
                   timestamp: Value(now),
                 ),
               );
+          shouldNotify = true;
         }
 
-        final updatedEither = await getRepairJobById(id);
-        
-        // Notify if status changed
-        if (newStatus != null && newStatus != currentJob.status) {
-          updatedEither.map((job) => _notifier.notifyStatusChange(job));
-        }
-
-        return updatedEither;
+        return await getRepairJobById(id);
       });
+
+      // Notify if status changed (runs entirely OUTSIDE the transaction Zone)
+      if (shouldNotify) {
+        updatedEither.map((job) => _notifier.notifyStatusChange(job));
+      }
+
+      return updatedEither;
     } catch (e, st) {
       return Left(Failure('Failed to update repair job', error: e, stackTrace: st));
     }
