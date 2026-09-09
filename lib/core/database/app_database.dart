@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
@@ -22,22 +21,27 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        try {
-          if (from < 2) {
-            await m.addColumn(sales, sales.amountTendered);
-            await m.addColumn(sales, sales.changeDue);
-          }
-          if (from < 3) {
-            await m.addColumn(sales, sales.cashierName);
-          }
-          if (from < 4) {
+        if (from < 2) {
+          try { await m.addColumn(sales, sales.amountTendered); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
+          try { await m.addColumn(sales, sales.changeDue); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
+        }
+        if (from < 3) {
+          try { await m.addColumn(sales, sales.cashierName); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
+        }
+        if (from < 4) {
+          // Check if table exists before creating to prevent out-of-sync user_version crashes
+          final existingTablesResult = await m.database.customSelect("SELECT name FROM sqlite_master WHERE type='table'").get();
+          final existingTables = existingTablesResult.map((row) => row.read<String>('name')).toSet();
+
+          if (!existingTables.contains('repair_jobs')) {
             await m.createTable(repairJobs);
+          }
+          if (!existingTables.contains('repair_status_history')) {
             await m.createTable(repairStatusHistory);
+          }
+          if (!existingTables.contains('repair_job_parts')) {
             await m.createTable(repairJobParts);
           }
-        } catch (e) {
-          // Log migration error but allow DB to open so we can surface it
-          debugPrint('Migration Error: $e');
         }
       },
       beforeOpen: (details) async {
