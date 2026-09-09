@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:pos_system/features/billing/presentation/checkout_screen.dart';
+import 'package:pos_system/features/billing/presentation/sales_history_screen.dart';
 import 'package:pos_system/features/inventory/presentation/inventory_screen.dart';
 import 'package:pos_system/features/settings/presentation/settings_screen.dart';
 
@@ -13,9 +15,9 @@ class _HomeShellState extends State<HomeShell> {
   int _selectedIndex = 0;
 
   static const _pages = [
-    Center(child: Text('Checkout Coming Soon')),
+    CheckoutScreen(),
     InventoryScreen(),
-    Center(child: Text('Sales Coming Soon')),
+    SalesHistoryScreen(),
     SettingsScreen(),
   ];
 
