@@ -9,8 +9,14 @@ import 'package:pos_system/providers/app_providers.dart';
 import 'package:uuid/uuid.dart';
 import 'package:pos_system/features/repair_jobs/domain/repair_notifier.dart';
 
+import 'package:pos_system/core/sms/sms_gateway.dart';
+import 'package:pos_system/features/settings/data/settings_repository.dart';
+
 final repairNotifierProvider = Provider<RepairNotifier>((ref) {
-  return LoggingRepairNotifier();
+  return RepairSmsNotifier(
+    ref.watch(smsGatewayProvider),
+    ref.watch(settingsRepositoryProvider),
+  );
 });
 
 final repairJobsRepositoryProvider = Provider<RepairJobsRepository>((ref) {
