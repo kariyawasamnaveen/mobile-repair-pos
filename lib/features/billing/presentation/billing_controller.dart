@@ -5,6 +5,7 @@ import 'package:pos_system/features/billing/data/billing_repository.dart';
 import 'package:pos_system/features/billing/domain/cart_item.dart';
 import 'package:pos_system/features/billing/domain/sale.dart';
 import 'package:pos_system/features/inventory/domain/item.dart';
+import 'package:pos_system/features/inventory/presentation/inventory_controller.dart';
 
 final cartProvider = StateNotifierProvider<CartNotifier, List<CartItem>>((ref) {
   return CartNotifier();
@@ -168,6 +169,7 @@ class CheckoutController {
       (sale) {
         _ref.read(cartProvider.notifier).clear();
         _ref.read(discountProvider.notifier).state = 0.0;
+        _ref.read(inventoryControllerProvider.notifier).loadItems();
         return Right(sale);
       },
     );

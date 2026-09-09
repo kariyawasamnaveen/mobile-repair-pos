@@ -4,6 +4,7 @@ import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/core/error/failure.dart';
 import 'package:pos_system/features/repair_jobs/data/repair_jobs_repository.dart';
 import 'package:pos_system/features/repair_jobs/domain/repair_job.dart';
+import 'package:pos_system/features/inventory/presentation/inventory_controller.dart';
 
 final repairJobsListProvider = FutureProvider.autoDispose<List<RepairJob>>((ref) async {
   final repo = ref.watch(repairJobsRepositoryProvider);
@@ -106,8 +107,7 @@ class RepairJobsController {
     final res = await _repository.addSparePart(jobId: jobId, itemId: itemId, quantity: quantity);
     if (res.isRight()) {
       _ref.invalidate(repairJobDetailProvider(jobId));
-      // Invalidate inventory provider assuming it exists
-      // _ref.invalidate(inventoryProvider); // This would require importing inventory controller, skip for loose coupling, trust next load
+      _ref.read(inventoryControllerProvider.notifier).loadItems();
     }
     return res;
   }
