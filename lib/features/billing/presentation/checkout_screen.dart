@@ -222,7 +222,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text('Subtotal:'),
-                            Text('LKR $subtotal'),
+                            Flexible(
+                              child: Text('LKR $subtotal', overflow: TextOverflow.ellipsis, textAlign: TextAlign.right),
+                            ),
                           ],
                         ),
                         Row(
@@ -248,7 +250,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text('Total:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                            Text('LKR $total', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                            Flexible(
+                              child: Text(
+                                'LKR $total',
+                                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 16),
