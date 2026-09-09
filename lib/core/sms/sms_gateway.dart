@@ -33,32 +33,51 @@ class HttpSmsGateway implements SmsGateway {
   Future<Either<Failure, void>> sendSms({required String toPhone, required String message}) async {
     try {
       final apiUrl = dotenv.env['SMS_API_URL'];
+      final userId = dotenv.env['SMS_USER_ID'];
       final apiKey = dotenv.env['SMS_API_KEY'];
       final senderId = dotenv.env['SMS_SENDER_ID'];
 
-      if (apiUrl == null || apiUrl.isEmpty) {
-        return Left(Failure('SMS_API_URL is not configured'));
+      if (apiUrl == null || apiUrl.isEmpty || userId == null || userId.isEmpty || 
+          apiKey == null || apiKey.isEmpty || senderId == null || senderId.isEmpty) {
+        return Left(Failure('SMS API configuration is missing in .env'));
       }
 
-      // TODO: Adjust payload and headers to match the chosen SMS provider (e.g. notify.lk, Text.lk, etc.)
-      final uri = Uri.parse(apiUrl);
-      final response = await http.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $apiKey', // Or whatever auth scheme they use
-        },
-        body: jsonEncode({
-          'to': toPhone, // May need to strip leading '0' or add '+94' based on API docs
-          'sender_id': senderId,
-          'message': message,
-        }),
-      );
+      // Normalize Sri Lankan phone number to 947XXXXXXXX
+      String normalizedPhone = toPhone.replaceAll(RegExp(r'[\s\-]'), '');
+      if (normalizedPhone.startsWith('+')) {
+        normalizedPhone = normalizedPhone.substring(1);
+      }
+      if (normalizedPhone.startsWith('0')) {
+        normalizedPhone = '94${normalizedPhone.substring(1)}';
+      }
+
+      final uri = Uri.parse(apiUrl).replace(queryParameters: {
+        'user_id': userId,
+        'api_key': apiKey,
+        'sender_id': senderId,
+        'to': normalizedPhone,
+        'message': message,
+      });
+
+      final response = await http.get(uri);
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        return const Right(null);
+        try {
+          final jsonResponse = jsonDecode(response.body);
+          // Notify.lk typically returns a status object. Assuming status 'success' or checking for error fields.
+          // Since their exact JSON isn't fully detailed here, a 200 OK with valid JSON is a good baseline, 
+          // but we can check if it explicitly reports an API-level error.
+          if (jsonResponse is Map && jsonResponse['status'] == 'error') {
+            return Left(Failure('SMS API returned error: ${jsonResponse['message'] ?? response.body}'));
+          }
+          return const Right(null);
+        } catch (e) {
+          // If response is not valid JSON but status is 200, we still might consider it successful 
+          // depending on provider, but let's be strict.
+          return Left(Failure('Failed to parse SMS API response: ${response.body}'));
+        }
       } else {
-        return Left(Failure('Failed to send SMS: ${response.statusCode} - ${response.body}'));
+        return Left(Failure('Failed to send SMS: HTTP ${response.statusCode} - ${response.body}'));
       }
     } catch (e, st) {
       return Left(Failure('Exception sending SMS', error: e, stackTrace: st));
