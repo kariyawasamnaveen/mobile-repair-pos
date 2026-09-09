@@ -42,14 +42,6 @@ LazyDatabase _openConnection() {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'pos_system.db'));
     
-    // TEMPORARY WIPE FOR LOCAL DEV:
-    // This deletes the database file if it exists so it gets recreated fresh
-    // with the latest schema, bypassing any corrupted schemaVersion stamps.
-    // We should remove this before going to production!
-    if (await file.exists()) {
-      await file.delete();
-    }
-    
     return NativeDatabase.createInBackground(file);
   });
 }
