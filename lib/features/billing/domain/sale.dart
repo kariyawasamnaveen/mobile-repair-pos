@@ -27,6 +27,8 @@ class Sale {
   final bool isCreditSale;
   final double amountPaid;
   final double balanceDue;
+  final double? amountTendered;
+  final double? changeDue;
   final DateTime createdAt;
   final List<SaleItem> items;
 
@@ -41,6 +43,8 @@ class Sale {
     required this.isCreditSale,
     required this.amountPaid,
     required this.balanceDue,
+    this.amountTendered,
+    this.changeDue,
     required this.createdAt,
     required this.items,
   });

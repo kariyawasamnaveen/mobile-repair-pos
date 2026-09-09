@@ -30,6 +30,8 @@ class BillingRepository {
     bool isCreditSale = false,
     double amountPaid = 0.0,
     double balanceDue = 0.0,
+    double? amountTendered,
+    double? changeDue,
   }) async {
     try {
       final saleId = _uuid.v4();
@@ -51,6 +53,8 @@ class BillingRepository {
                 isCreditSale: Value(isCreditSale),
                 amountPaid: amountPaid,
                 balanceDue: Value(balanceDue),
+                amountTendered: Value(amountTendered),
+                changeDue: Value(changeDue),
                 createdAt: Value(now),
               ),
             );
@@ -143,6 +147,8 @@ class BillingRepository {
         isCreditSale: isCreditSale,
         amountPaid: amountPaid,
         balanceDue: balanceDue,
+        amountTendered: amountTendered,
+        changeDue: changeDue,
         createdAt: now,
         items: saleItemsList,
       ));
@@ -191,6 +197,8 @@ class BillingRepository {
           isCreditSale: row.isCreditSale,
           amountPaid: row.amountPaid,
           balanceDue: row.balanceDue,
+          amountTendered: row.amountTendered,
+          changeDue: row.changeDue,
           createdAt: row.createdAt,
           items: saleItems,
         ));

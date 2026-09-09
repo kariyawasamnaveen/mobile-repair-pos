@@ -66,6 +66,8 @@ class Sales extends Table {
   BoolColumn get isCreditSale => boolean().withDefault(const Constant(false))();
   RealColumn get amountPaid => real()();
   RealColumn get balanceDue => real().withDefault(const Constant(0.0))();
+  RealColumn get amountTendered => real().nullable()();
+  RealColumn get changeDue => real().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override

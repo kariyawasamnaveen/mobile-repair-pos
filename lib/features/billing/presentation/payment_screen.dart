@@ -16,17 +16,37 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   final _customerNameController = TextEditingController();
   final _customerPhoneController = TextEditingController();
   final _amountPaidController = TextEditingController();
+  final _amountTenderedController = TextEditingController();
   bool _isProcessing = false;
+  double _changeDue = 0.0;
 
   @override
   void dispose() {
     _customerNameController.dispose();
     _customerPhoneController.dispose();
     _amountPaidController.dispose();
+    _amountTenderedController.dispose();
     super.dispose();
   }
 
-  Future<void> _processPayment() async {
+  void _calculateChangeDue(double total) {
+    if (_paymentMethod == PaymentMethod.cash) {
+      final tendered = double.tryParse(_amountTenderedController.text) ?? 0.0;
+      setState(() {
+        _changeDue = tendered - total;
+      });
+    }
+  }
+
+  Future<void> _processPayment(double total) async {
+    final isCash = _paymentMethod == PaymentMethod.cash;
+    final tendered = double.tryParse(_amountTenderedController.text) ?? 0.0;
+
+    if (isCash && tendered < total) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Amount tendered is less than total')));
+      return;
+    }
+
     setState(() => _isProcessing = true);
     
     final isCredit = _paymentMethod == PaymentMethod.credit;
@@ -39,6 +59,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
       customerPhone: _customerPhoneController.text.isNotEmpty ? _customerPhoneController.text : null,
       isCreditSale: isCredit,
       amountPaid: isCredit ? amountPaid : 0.0,
+      amountTendered: isCash ? tendered : null,
     );
 
     if (mounted) {
@@ -58,6 +79,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     final discount = ref.watch(discountProvider);
     final total = subtotal - discount;
     final isCredit = _paymentMethod == PaymentMethod.credit;
+    final isCash = _paymentMethod == PaymentMethod.cash;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Payment')),
@@ -67,6 +89,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 Text('Total Due: LKR $total', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                if (isCash)
+                  Text('Change Due: LKR ${_changeDue >= 0 ? _changeDue.toStringAsFixed(2) : "0.00"}', 
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _changeDue < 0 ? Colors.red : Colors.green)),
                 const SizedBox(height: 24),
                 
                 const Text('Payment Method', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -78,11 +103,26 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                   ],
                   selected: {_paymentMethod},
                   onSelectionChanged: (set) {
-                    setState(() => _paymentMethod = set.first);
+                    setState(() {
+                      _paymentMethod = set.first;
+                      _calculateChangeDue(total);
+                    });
                   },
                 ),
                 
                 const SizedBox(height: 24),
+                
+                if (isCash) ...[
+                  const Text('Cash Payment', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                  TextField(
+                    controller: _amountTenderedController,
+                    decoration: const InputDecoration(labelText: 'Amount Tendered'),
+                    keyboardType: TextInputType.number,
+                    onChanged: (val) => _calculateChangeDue(total),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
                 const Text('Customer Info (Optional for Cash/Card)', style: TextStyle(fontWeight: FontWeight.bold)),
                 TextField(
                   controller: _customerNameController,
@@ -106,7 +146,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
                 const SizedBox(height: 48),
                 ElevatedButton(
-                  onPressed: _processPayment,
+                  onPressed: () => _processPayment(total),
                   style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
                   child: const Text('CONFIRM PAYMENT & PRINT', style: TextStyle(fontSize: 18)),
                 ),

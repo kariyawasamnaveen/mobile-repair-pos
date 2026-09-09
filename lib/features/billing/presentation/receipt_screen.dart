@@ -67,8 +67,10 @@ class ReceiptScreen extends StatelessWidget {
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), Text('${sale.total}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18))]),
                   const SizedBox(height: 16),
                   Text('Payment: ${sale.paymentMethod.name.toUpperCase()}', textAlign: TextAlign.right),
-                  if (sale.paymentMethod == PaymentMethod.cash)
-                    Text('Change: 0.00', textAlign: TextAlign.right), // Simplified
+                  if (sale.paymentMethod == PaymentMethod.cash && sale.amountTendered != null) ...[
+                    Text('Amount Tendered: ${sale.amountTendered}', textAlign: TextAlign.right),
+                    Text('Change Due: ${sale.changeDue}', textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ],
                   if (sale.isCreditSale) ...[
                     Text('Paid: ${sale.amountPaid}', textAlign: TextAlign.right),
                     Text('Balance Due: ${sale.balanceDue}', textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold)),

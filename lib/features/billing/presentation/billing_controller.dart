@@ -126,6 +126,7 @@ class CheckoutController {
     String? customerPhone,
     bool isCreditSale = false,
     double amountPaid = 0.0,
+    double? amountTendered,
   }) async {
     final cart = _ref.read(cartProvider);
     if (cart.isEmpty) return const Left('Cart is empty');
@@ -134,6 +135,15 @@ class CheckoutController {
     final discount = _ref.read(discountProvider);
     final total = subtotal - discount;
     final balanceDue = isCreditSale ? total - amountPaid : 0.0;
+    
+    if (paymentMethod == PaymentMethod.cash) {
+      if (amountTendered == null || amountTendered < total) {
+        return const Left('Amount tendered must be greater than or equal to total');
+      }
+    }
+    final changeDue = (paymentMethod == PaymentMethod.cash && amountTendered != null) 
+        ? amountTendered - total 
+        : null;
 
     final repo = _ref.read(billingRepositoryProvider);
     final result = await repo.processSale(
@@ -147,6 +157,8 @@ class CheckoutController {
       isCreditSale: isCreditSale,
       amountPaid: amountPaid,
       balanceDue: balanceDue,
+      amountTendered: paymentMethod == PaymentMethod.cash ? amountTendered : null,
+      changeDue: changeDue,
     );
 
     return result.match(
