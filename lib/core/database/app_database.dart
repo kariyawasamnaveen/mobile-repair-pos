@@ -7,12 +7,12 @@ import 'package:pos_system/core/database/tables.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [AppSettings, Items, StockMovements, ItemImeis, Sales, SaleItems])
+@DriftDatabase(tables: [AppSettings, Items, StockMovements, ItemImeis, Sales, SaleItems, RepairJobs, RepairStatusHistory, RepairJobParts])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -27,6 +27,11 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 3) {
           await m.addColumn(sales, sales.cashierName);
+        }
+        if (from < 4) {
+          await m.createTable(repairJobs);
+          await m.createTable(repairStatusHistory);
+          await m.createTable(repairJobParts);
         }
       },
       beforeOpen: (details) async {

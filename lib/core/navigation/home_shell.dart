@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pos_system/features/billing/presentation/checkout_screen.dart';
 import 'package:pos_system/features/billing/presentation/sales_history_screen.dart';
 import 'package:pos_system/features/inventory/presentation/inventory_screen.dart';
+import 'package:pos_system/features/repair_jobs/presentation/repair_job_list_screen.dart';
 import 'package:pos_system/features/settings/presentation/settings_screen.dart';
 
 class HomeShell extends StatefulWidget {
@@ -17,6 +18,7 @@ class _HomeShellState extends State<HomeShell> {
   static const _pages = [
     CheckoutScreen(),
     InventoryScreen(),
+    RepairJobListScreen(),
     SalesHistoryScreen(),
     SettingsScreen(),
   ];
@@ -31,6 +33,7 @@ class _HomeShellState extends State<HomeShell> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.point_of_sale), label: 'Checkout'),
           NavigationDestination(icon: Icon(Icons.inventory_2), label: 'Inventory'),
+          NavigationDestination(icon: Icon(Icons.build), label: 'Repairs'),
           NavigationDestination(icon: Icon(Icons.receipt_long), label: 'Sales'),
           NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
         ],

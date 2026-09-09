@@ -1,8 +1,9 @@
 import 'package:drift/drift.dart';
 
 enum ItemCategory { phone, accessory, sparePart, other }
-enum MovementReason { sale, restock, adjustment, returnItem }
+enum MovementReason { sale, restock, adjustment, returnItem, repairUsage }
 enum PaymentMethod { cash, card, credit }
+enum RepairJobStatus { received, diagnosing, awaitingCustomerApproval, inProgress, readyForPickup, delivered, cancelled }
 
 @DataClassName('SettingItem')
 class AppSettings extends Table {
@@ -83,4 +84,45 @@ class SaleItems extends Table {
   IntColumn get quantitySold => integer()();
   RealColumn get unitPriceAtSale => real()();
   TextColumn get imeiSold => text().nullable()();
+}
+
+@DataClassName('RepairJobEntity')
+class RepairJobs extends Table {
+  TextColumn get id => text()();
+  TextColumn get jobNumber => text()(); // RJ-0001
+  TextColumn get customerName => text()();
+  TextColumn get customerPhone => text()();
+  TextColumn get deviceModel => text().nullable()();
+  TextColumn get deviceImei => text().nullable()();
+  TextColumn get reportedIssue => text()();
+  TextColumn get deviceConditionNotes => text()();
+  TextColumn get status => textEnum<RepairJobStatus>()();
+  TextColumn get assignedTechnicianName => text().nullable()();
+  RealColumn get estimatedCost => real().nullable()();
+  RealColumn get finalCost => real().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get statusUpdatedAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get deliveredAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('RepairStatusHistoryEntity')
+class RepairStatusHistory extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get jobId => text().references(RepairJobs, #id)();
+  TextColumn get previousStatus => textEnum<RepairJobStatus>().nullable()();
+  TextColumn get newStatus => textEnum<RepairJobStatus>()();
+  TextColumn get note => text().nullable()();
+  DateTimeColumn get timestamp => dateTime().withDefault(currentDateAndTime)();
+}
+
+@DataClassName('RepairJobPartEntity')
+class RepairJobParts extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get jobId => text().references(RepairJobs, #id)();
+  TextColumn get itemId => text().references(Items, #id)();
+  IntColumn get quantityUsed => integer()();
+  RealColumn get unitPrice => real()();
 }
