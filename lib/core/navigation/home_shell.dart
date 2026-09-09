@@ -1,0 +1,38 @@
+import 'package:flutter/material.dart';
+import 'package:pos_system/features/inventory/presentation/inventory_screen.dart';
+import 'package:pos_system/features/settings/presentation/settings_screen.dart';
+
+class HomeShell extends StatefulWidget {
+  const HomeShell({super.key});
+
+  @override
+  State<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends State<HomeShell> {
+  int _selectedIndex = 0;
+
+  static const _pages = [
+    Center(child: Text('Checkout Coming Soon')),
+    InventoryScreen(),
+    Center(child: Text('Sales Coming Soon')),
+    SettingsScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _pages[_selectedIndex],
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (i) => setState(() => _selectedIndex = i),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.point_of_sale), label: 'Checkout'),
+          NavigationDestination(icon: Icon(Icons.inventory_2), label: 'Inventory'),
+          NavigationDestination(icon: Icon(Icons.receipt_long), label: 'Sales'),
+          NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
+        ],
+      ),
+    );
+  }
+}
