@@ -184,21 +184,34 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                             ],
                                           )
                                       ] else ...[
-                                        Row(
-                                          children: [
-                                            IconButton(
-                                              icon: const Icon(Icons.remove_circle_outline),
-                                              onPressed: () => ref.read(cartProvider.notifier).updateQuantity(cartItem.itemId, cartItem.quantity - 1),
-                                            ),
-                                            Text('${cartItem.quantity}'),
-                                            IconButton(
-                                              icon: const Icon(Icons.add_circle_outline),
-                                              onPressed: () => ref.read(cartProvider.notifier).updateQuantity(cartItem.itemId, cartItem.quantity + 1),
-                                            ),
-                                            const Spacer(),
-                                            Text('@ LKR ${cartItem.unitPrice}'),
-                                          ],
-                                        ),
+                                          Row(
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(Icons.remove_circle_outline),
+                                                padding: EdgeInsets.zero,
+                                                constraints: const BoxConstraints(),
+                                                onPressed: () => ref.read(cartProvider.notifier).updateQuantity(cartItem.itemId, cartItem.quantity - 1),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text('${cartItem.quantity}'),
+                                              const SizedBox(width: 4),
+                                              IconButton(
+                                                icon: const Icon(Icons.add_circle_outline),
+                                                padding: EdgeInsets.zero,
+                                                constraints: const BoxConstraints(),
+                                                onPressed: () => ref.read(cartProvider.notifier).updateQuantity(cartItem.itemId, cartItem.quantity + 1),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Expanded(
+                                                child: Text(
+                                                  '@ LKR ${cartItem.unitPrice}',
+                                                  overflow: TextOverflow.ellipsis,
+                                                  maxLines: 1,
+                                                  textAlign: TextAlign.right,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                       ],
                                     ],
                                   ),
@@ -222,8 +235,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text('Subtotal:'),
-                            Flexible(
-                              child: Text('LKR $subtotal', overflow: TextOverflow.ellipsis, textAlign: TextAlign.right),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'LKR $subtotal',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                textAlign: TextAlign.right,
+                              ),
                             ),
                           ],
                         ),
@@ -231,8 +250,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text('Discount:'),
-                            SizedBox(
-                              width: 100,
+                            const SizedBox(width: 8),
+                            Expanded(
                               child: TextField(
                                 keyboardType: TextInputType.number,
                                 textAlign: TextAlign.right,
@@ -250,11 +269,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text('Total:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                            Flexible(
+                            const SizedBox(width: 8),
+                            Expanded(
                               child: Text(
                                 'LKR $total',
                                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                                 overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                                 textAlign: TextAlign.right,
                               ),
                             ),
