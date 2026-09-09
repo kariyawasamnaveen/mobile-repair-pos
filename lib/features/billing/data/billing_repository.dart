@@ -153,7 +153,7 @@ class BillingRepository {
         items: saleItemsList,
       ));
     } catch (e, st) {
-      return Left(Failure('Failed to process sale', error: e, stackTrace: st));
+      return Left(Failure('Failed to process sale: $e', error: e, stackTrace: st));
     }
   }
 
