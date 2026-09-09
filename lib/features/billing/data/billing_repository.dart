@@ -32,6 +32,7 @@ class BillingRepository {
     double balanceDue = 0.0,
     double? amountTendered,
     double? changeDue,
+    String? cashierName,
   }) async {
     try {
       final saleId = _uuid.v4();
@@ -55,6 +56,7 @@ class BillingRepository {
                 balanceDue: Value(balanceDue),
                 amountTendered: Value(amountTendered),
                 changeDue: Value(changeDue),
+                cashierName: Value(cashierName),
                 createdAt: Value(now),
               ),
             );
@@ -149,6 +151,7 @@ class BillingRepository {
         balanceDue: balanceDue,
         amountTendered: amountTendered,
         changeDue: changeDue,
+        cashierName: cashierName,
         createdAt: now,
         items: saleItemsList,
       ));
@@ -199,6 +202,7 @@ class BillingRepository {
           balanceDue: row.balanceDue,
           amountTendered: row.amountTendered,
           changeDue: row.changeDue,
+          cashierName: row.cashierName,
           createdAt: row.createdAt,
           items: saleItems,
         ));

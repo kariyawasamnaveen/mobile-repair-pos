@@ -29,6 +29,7 @@ class Sale {
   final double balanceDue;
   final double? amountTendered;
   final double? changeDue;
+  final String? cashierName;
   final DateTime createdAt;
   final List<SaleItem> items;
 
@@ -45,6 +46,7 @@ class Sale {
     required this.balanceDue,
     this.amountTendered,
     this.changeDue,
+    this.cashierName,
     required this.createdAt,
     required this.items,
   });

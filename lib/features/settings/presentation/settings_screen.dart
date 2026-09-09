@@ -11,56 +11,85 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _storeNameController = TextEditingController();
+  final _storeAddressController = TextEditingController();
+  final _storePhoneController = TextEditingController();
 
   @override
   void dispose() {
     _storeNameController.dispose();
+    _storeAddressController.dispose();
+    _storePhoneController.dispose();
     super.dispose();
   }
 
-  Future<void> _saveStoreName() async {
-    final error = await ref.read(storeNameProvider.notifier).saveStoreName(_storeNameController.text);
+  Future<void> _saveStoreSettings() async {
+    final error = await ref.read(storeSettingsProvider.notifier).saveStoreSettings(
+      name: _storeNameController.text,
+      address: _storeAddressController.text,
+      phone: _storePhoneController.text,
+    );
     if (!mounted) return;
     
     if (error != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Store name saved successfully!')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Store settings saved successfully!')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final storeNameState = ref.watch(storeNameProvider);
+    final settingsState = ref.watch(storeSettingsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
       ),
-      body: storeNameState.when(
-        data: (storeName) {
-          if (_storeNameController.text.isEmpty && storeName != null) {
-            _storeNameController.text = storeName;
+      body: settingsState.when(
+        data: (settings) {
+          if (_storeNameController.text.isEmpty && settings.name != null) {
+            _storeNameController.text = settings.name!;
           }
-          return Padding(
+          if (_storeAddressController.text.isEmpty && settings.address != null) {
+            _storeAddressController.text = settings.address!;
+          }
+          if (_storePhoneController.text.isEmpty && settings.phone != null) {
+            _storePhoneController.text = settings.phone!;
+          }
+          
+          return ListView(
             padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: _storeNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Store Name',
-                    border: OutlineInputBorder(),
-                  ),
+            children: [
+              TextField(
+                controller: _storeNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Store Name',
+                  border: OutlineInputBorder(),
                 ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: _saveStoreName,
-                  child: const Text('Save'),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _storeAddressController,
+                decoration: const InputDecoration(
+                  labelText: 'Store Address',
+                  border: OutlineInputBorder(),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _storePhoneController,
+                decoration: const InputDecoration(
+                  labelText: 'Store Phone',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _saveStoreSettings,
+                child: const Text('Save'),
+              ),
+            ],
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),

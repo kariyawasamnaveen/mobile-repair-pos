@@ -124,6 +124,7 @@ class CheckoutController {
     required PaymentMethod paymentMethod,
     String? customerName,
     String? customerPhone,
+    String? cashierName,
     bool isCreditSale = false,
     double amountPaid = 0.0,
     double? amountTendered,
@@ -159,6 +160,7 @@ class CheckoutController {
       balanceDue: balanceDue,
       amountTendered: paymentMethod == PaymentMethod.cash ? amountTendered : null,
       changeDue: changeDue,
+      cashierName: cashierName,
     );
 
     return result.match(

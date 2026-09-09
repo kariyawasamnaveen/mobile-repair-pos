@@ -68,6 +68,7 @@ class Sales extends Table {
   RealColumn get balanceDue => real().withDefault(const Constant(0.0))();
   RealColumn get amountTendered => real().nullable()();
   RealColumn get changeDue => real().nullable()();
+  TextColumn get cashierName => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override

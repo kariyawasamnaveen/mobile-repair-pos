@@ -17,6 +17,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   final _customerPhoneController = TextEditingController();
   final _amountPaidController = TextEditingController();
   final _amountTenderedController = TextEditingController();
+  final _cashierNameController = TextEditingController();
   final _tenderedFocusNode = FocusNode();
   
   bool _isProcessing = false;
@@ -36,6 +37,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     _customerPhoneController.dispose();
     _amountPaidController.dispose();
     _amountTenderedController.dispose();
+    _cashierNameController.dispose();
     _tenderedFocusNode.dispose();
     super.dispose();
   }
@@ -85,6 +87,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
       paymentMethod: _paymentMethod,
       customerName: _customerNameController.text.isNotEmpty ? _customerNameController.text : null,
       customerPhone: _customerPhoneController.text.isNotEmpty ? _customerPhoneController.text : null,
+      cashierName: _cashierNameController.text.isNotEmpty ? _cashierNameController.text : null,
       isCreditSale: isCredit,
       amountPaid: isCredit ? amountPaid : 0.0,
       amountTendered: isCash ? tendered : null,
@@ -227,6 +230,13 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                 ],
 
                 const SizedBox(height: 16),
+                
+                TextField(
+                  controller: _cashierNameController,
+                  decoration: const InputDecoration(labelText: 'Cashier Name (Optional)', isDense: true, prefixIcon: Icon(Icons.badge)),
+                ),
+
+                const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () => _processPayment(total),
                   style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),

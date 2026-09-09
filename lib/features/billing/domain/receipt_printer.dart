@@ -1,16 +1,22 @@
 import 'package:flutter/foundation.dart';
 import 'package:pos_system/features/billing/domain/sale.dart';
 import 'package:pos_system/core/database/tables.dart';
+import 'package:pos_system/features/billing/presentation/receipt_screen.dart' show receiptFooterPolicy, receiptFooterGreeting;
 
 abstract class ReceiptPrinter {
-  Future<void> printReceipt(Sale sale);
+  Future<void> printReceipt(Sale sale, {String? storeName, String? storeAddress, String? storePhone});
 }
 
 class LoggingReceiptPrinter implements ReceiptPrinter {
   @override
-  Future<void> printReceipt(Sale sale) async {
+  Future<void> printReceipt(Sale sale, {String? storeName, String? storeAddress, String? storePhone}) async {
     debugPrint('=== RECEIPT ===');
+    debugPrint(storeName ?? 'STORE NAME');
+    if (storeAddress != null && storeAddress.isNotEmpty) debugPrint(storeAddress);
+    if (storePhone != null && storePhone.isNotEmpty) debugPrint(storePhone);
+    
     debugPrint('Sale ID: ${sale.id}');
+    if (sale.cashierName != null) debugPrint('Served by: ${sale.cashierName}');
     debugPrint('Customer: ${sale.customerName ?? 'Walk-in'}');
     debugPrint('----------------');
     for (final item in sale.items) {
@@ -32,6 +38,9 @@ class LoggingReceiptPrinter implements ReceiptPrinter {
       debugPrint('Paid: ${sale.amountPaid}');
       debugPrint('Balance Due: ${sale.balanceDue}');
     }
+    debugPrint('----------------');
+    debugPrint(receiptFooterPolicy);
+    debugPrint(receiptFooterGreeting);
     debugPrint('================');
   }
 }

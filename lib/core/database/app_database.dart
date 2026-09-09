@@ -12,7 +12,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -24,6 +24,9 @@ class AppDatabase extends _$AppDatabase {
         if (from < 2) {
           await m.addColumn(sales, sales.amountTendered);
           await m.addColumn(sales, sales.changeDue);
+        }
+        if (from < 3) {
+          await m.addColumn(sales, sales.cashierName);
         }
       },
       beforeOpen: (details) async {
