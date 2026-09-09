@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
@@ -21,17 +22,22 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        if (from < 2) {
-          await m.addColumn(sales, sales.amountTendered);
-          await m.addColumn(sales, sales.changeDue);
-        }
-        if (from < 3) {
-          await m.addColumn(sales, sales.cashierName);
-        }
-        if (from < 4) {
-          await m.createTable(repairJobs);
-          await m.createTable(repairStatusHistory);
-          await m.createTable(repairJobParts);
+        try {
+          if (from < 2) {
+            await m.addColumn(sales, sales.amountTendered);
+            await m.addColumn(sales, sales.changeDue);
+          }
+          if (from < 3) {
+            await m.addColumn(sales, sales.cashierName);
+          }
+          if (from < 4) {
+            await m.createTable(repairJobs);
+            await m.createTable(repairStatusHistory);
+            await m.createTable(repairJobParts);
+          }
+        } catch (e) {
+          // Log migration error but allow DB to open so we can surface it
+          debugPrint('Migration Error: $e');
         }
       },
       beforeOpen: (details) async {

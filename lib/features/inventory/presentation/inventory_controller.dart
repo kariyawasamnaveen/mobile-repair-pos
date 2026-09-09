@@ -20,7 +20,7 @@ class InventoryController extends StateNotifier<AsyncValue<List<Item>>> {
     state = const AsyncValue.loading();
     final result = await _repository.getItems(search: _searchQuery, category: _categoryFilter);
     result.match(
-      (failure) => state = AsyncValue.error(failure.message, StackTrace.current),
+      (failure) => state = AsyncValue.error('${failure.message}: ${failure.error}', StackTrace.current),
       (items) => state = AsyncValue.data(items),
     );
   }
