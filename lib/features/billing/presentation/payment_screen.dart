@@ -118,8 +118,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
           : ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     Text('Total Due: LKR $total', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                     if (isCash)
