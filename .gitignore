@@ -37,3 +37,8 @@ pubspec.lock
 # Generated code
 *.g.dart
 *.freezed.dart
+
+# SQLite local databases (dev/test artefacts — never commit)
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
