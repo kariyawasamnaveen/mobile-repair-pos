@@ -7,12 +7,12 @@ import 'package:pos_system/core/database/tables.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [AppSettings, Items, StockMovements, ItemImeis, Sales, SaleItems, RepairJobs, RepairStatusHistory, RepairJobParts])
+@DriftDatabase(tables: [AppSettings, Items, StockMovements, ItemImeis, Sales, SaleItems, RepairJobs, RepairStatusHistory, RepairJobParts, CreditPayments])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -41,6 +41,13 @@ class AppDatabase extends _$AppDatabase {
           }
           if (!existingTables.contains('repair_job_parts')) {
             await m.createTable(repairJobParts);
+          }
+        }
+        if (from < 5) {
+          final existingTablesResult = await m.database.customSelect("SELECT name FROM sqlite_master WHERE type='table'").get();
+          final existingTables = existingTablesResult.map((row) => row.read<String>('name')).toSet();
+          if (!existingTables.contains('credit_payments')) {
+            await m.createTable(creditPayments);
           }
         }
       },

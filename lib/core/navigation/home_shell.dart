@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_system/features/billing/presentation/checkout_screen.dart';
-import 'package:pos_system/features/billing/presentation/sales_history_screen.dart';
+import 'package:pos_system/features/billing/presentation/sales_and_ledger_screen.dart';
 import 'package:pos_system/features/inventory/presentation/inventory_screen.dart';
 import 'package:pos_system/features/repair_jobs/presentation/repair_job_list_screen.dart';
 import 'package:pos_system/features/settings/presentation/settings_screen.dart';
@@ -19,7 +19,7 @@ class _HomeShellState extends State<HomeShell> {
     CheckoutScreen(),
     InventoryScreen(),
     RepairJobListScreen(),
-    SalesHistoryScreen(),
+    SalesAndLedgerScreen(),
     SettingsScreen(),
   ];
 

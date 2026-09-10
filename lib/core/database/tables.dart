@@ -4,6 +4,7 @@ enum ItemCategory { phone, accessory, sparePart, other }
 enum MovementReason { sale, restock, adjustment, returnItem, repairUsage }
 enum PaymentMethod { cash, card, credit }
 enum RepairJobStatus { received, diagnosing, awaitingCustomerApproval, inProgress, readyForPickup, delivered, cancelled }
+enum CreditPaymentMethod { cash, card }
 
 @DataClassName('SettingItem')
 class AppSettings extends Table {
@@ -125,4 +126,21 @@ class RepairJobParts extends Table {
   TextColumn get itemId => text().references(Items, #id)();
   IntColumn get quantityUsed => integer()();
   RealColumn get unitPrice => real()();
+}
+
+/// Records each credit payment collected from a customer.
+/// [saleId] is nullable — null means the payment was a general payment
+/// and the repository applies it to the oldest outstanding sale(s).
+@DataClassName('CreditPaymentEntity')
+class CreditPayments extends Table {
+  TextColumn get id => text()(); // UUID v4
+  TextColumn get customerPhone => text()();
+  TextColumn get saleId => text().nullable()(); // which sale this was applied to
+  RealColumn get amount => real()();
+  TextColumn get paymentMethod => textEnum<CreditPaymentMethod>()();
+  DateTimeColumn get collectedAt => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get notes => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }
