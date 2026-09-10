@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'dart:developer' as developer;
 import 'package:pos_system/features/billing/domain/sale.dart';
 import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/features/billing/presentation/receipt_screen.dart' show receiptFooterPolicy, receiptFooterGreeting;
@@ -10,37 +10,40 @@ abstract class ReceiptPrinter {
 class LoggingReceiptPrinter implements ReceiptPrinter {
   @override
   Future<void> printReceipt(Sale sale, {String? storeName, String? storeAddress, String? storePhone}) async {
-    debugPrint('=== RECEIPT ===');
-    debugPrint(storeName ?? 'STORE NAME');
-    if (storeAddress != null && storeAddress.isNotEmpty) debugPrint(storeAddress);
-    if (storePhone != null && storePhone.isNotEmpty) debugPrint(storePhone);
+    final buffer = StringBuffer();
+    buffer.writeln('=== RECEIPT ===');
+    buffer.writeln(storeName ?? 'STORE NAME');
+    if (storeAddress != null && storeAddress.isNotEmpty) buffer.writeln(storeAddress);
+    if (storePhone != null && storePhone.isNotEmpty) buffer.writeln(storePhone);
     
-    debugPrint('Sale ID: ${sale.id}');
-    if (sale.cashierName != null) debugPrint('Served by: ${sale.cashierName}');
-    debugPrint('Customer: ${sale.customerName ?? 'Walk-in'}');
-    debugPrint('----------------');
+    buffer.writeln('Sale ID: ${sale.id}');
+    if (sale.cashierName != null) buffer.writeln('Served by: ${sale.cashierName}');
+    buffer.writeln('Customer: ${sale.customerName ?? 'Walk-in'}');
+    buffer.writeln('----------------');
     for (final item in sale.items) {
-      debugPrint('${item.itemName} x${item.quantitySold} @ ${item.unitPriceAtSale}');
+      buffer.writeln('${item.itemName} x${item.quantitySold} @ ${item.unitPriceAtSale}');
       if (item.imeiSold != null) {
-        debugPrint('  IMEI: ${item.imeiSold}');
+        buffer.writeln('  IMEI: ${item.imeiSold}');
       }
     }
-    debugPrint('----------------');
-    debugPrint('Subtotal: ${sale.subtotal}');
-    debugPrint('Discount: ${sale.discount}');
-    debugPrint('Total: ${sale.total}');
-    debugPrint('Payment: ${sale.paymentMethod.name}');
+    buffer.writeln('----------------');
+    buffer.writeln('Subtotal: ${sale.subtotal}');
+    buffer.writeln('Discount: ${sale.discount}');
+    buffer.writeln('Total: ${sale.total}');
+    buffer.writeln('Payment: ${sale.paymentMethod.name}');
     if (sale.paymentMethod == PaymentMethod.cash && sale.amountTendered != null) {
-      debugPrint('Amount Tendered: ${sale.amountTendered}');
-      debugPrint('Change Due: ${sale.changeDue}');
+      buffer.writeln('Amount Tendered: ${sale.amountTendered}');
+      buffer.writeln('Change Due: ${sale.changeDue}');
     }
     if (sale.isCreditSale) {
-      debugPrint('Paid: ${sale.amountPaid}');
-      debugPrint('Balance Due: ${sale.balanceDue}');
+      buffer.writeln('Paid: ${sale.amountPaid}');
+      buffer.writeln('Balance Due: ${sale.balanceDue}');
     }
-    debugPrint('----------------');
-    debugPrint(receiptFooterPolicy);
-    debugPrint(receiptFooterGreeting);
-    debugPrint('================');
+    buffer.writeln('----------------');
+    buffer.writeln(receiptFooterPolicy);
+    buffer.writeln(receiptFooterGreeting);
+    buffer.writeln('================');
+
+    developer.log(buffer.toString(), name: 'ReceiptPrinter');
   }
 }

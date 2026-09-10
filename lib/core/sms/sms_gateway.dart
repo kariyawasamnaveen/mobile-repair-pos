@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'dart:developer' as developer;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpdart/fpdart.dart';
@@ -25,10 +25,12 @@ class LoggingSmsGateway implements SmsGateway {
     required String toPhone,
     required String message,
   }) async {
-    debugPrint('================ SMS NOTIFICATION STUB ================');
-    debugPrint('Would send SMS to: $toPhone');
-    debugPrint('Message: $message');
-    debugPrint('=======================================================');
+    final buffer = StringBuffer();
+    buffer.writeln('================ SMS NOTIFICATION STUB ================');
+    buffer.writeln('Would send SMS to: $toPhone');
+    buffer.writeln('Message: $message');
+    buffer.writeln('=======================================================');
+    developer.log(buffer.toString(), name: 'SmsGateway');
     return const Right(null);
   }
 }

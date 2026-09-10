@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'dart:developer' as developer;
 import 'package:pos_system/features/repair_jobs/domain/repair_job.dart';
 import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/core/sms/sms_gateway.dart';
@@ -54,12 +54,12 @@ class RepairSmsNotifier implements RepairNotifier {
         
         // Log errors but don't throw, as SMS failure shouldn't fail the repair update
         result.fold(
-          (failure) => debugPrint('SMS Notifier Failed: ${failure.message}'),
-          (_) => debugPrint('SMS Notifier Success: Message sent to ${job.customerPhone}'),
+          (failure) => developer.log('SMS Notifier Failed: ${failure.message}', name: 'RepairNotifier', error: failure.error),
+          (_) {}, // Success
         );
       }
-    } catch (e) {
-      debugPrint('SMS Notifier Exception: $e');
+    } catch (e, st) {
+      developer.log('SMS Notifier Exception', name: 'RepairNotifier', error: e, stackTrace: st);
     }
   }
 }
