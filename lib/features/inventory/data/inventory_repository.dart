@@ -62,15 +62,27 @@ class InventoryRepository {
       final itemsData = await query.get();
       final items = <Item>[];
 
+      final phoneIds = itemsData
+          .where((r) => r.category == ItemCategory.phone)
+          .map((r) => r.id)
+          .toList();
+      final Map<String, List<String>> imeiMap = {};
+
+      if (phoneIds.isNotEmpty) {
+        final imeiQuery = _db.select(_db.itemImeis)
+          ..where((t) => t.itemId.isIn(phoneIds) & t.isSold.equals(false));
+        final imeiRows = await imeiQuery.get();
+        for (final row in imeiRows) {
+          imeiMap.putIfAbsent(row.itemId, () => []).add(row.imei);
+        }
+      }
+
       for (final row in itemsData) {
         List<String> imeis = [];
         int actualQuantity = row.quantity;
 
         if (row.category == ItemCategory.phone) {
-          final imeiRows = await (_db.select(_db.itemImeis)
-                ..where((t) => t.itemId.equals(row.id) & t.isSold.equals(false)))
-              .get();
-          imeis = imeiRows.map((e) => e.imei).toList();
+          imeis = imeiMap[row.id] ?? [];
           actualQuantity = imeis.length;
         }
 

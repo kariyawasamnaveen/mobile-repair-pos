@@ -170,24 +170,31 @@ class BillingRepository {
 
       final salesRows = await query.get();
       final sales = <Sale>[];
-
-      for (final row in salesRows) {
+      final saleIds = salesRows.map((r) => r.id).toList();
+      
+      final Map<String, List<SaleItem>> saleItemsMap = {};
+      if (saleIds.isNotEmpty) {
         final itemsQuery = _db.select(_db.saleItems).join([
           innerJoin(_db.items, _db.items.id.equalsExp(_db.saleItems.itemId))
-        ])..where(_db.saleItems.saleId.equals(row.id));
-
+        ])..where(_db.saleItems.saleId.isIn(saleIds));
+        
         final itemsResult = await itemsQuery.get();
-        final saleItems = itemsResult.map((res) {
+        for (final res in itemsResult) {
           final saleItem = res.readTable(_db.saleItems);
           final item = res.readTable(_db.items);
-          return SaleItem(
+          
+          saleItemsMap.putIfAbsent(saleItem.saleId, () => []).add(SaleItem(
             itemId: item.id,
             itemName: item.name,
             quantitySold: saleItem.quantitySold,
             unitPriceAtSale: saleItem.unitPriceAtSale,
             imeiSold: saleItem.imeiSold,
-          );
-        }).toList();
+          ));
+        }
+      }
+
+      for (final row in salesRows) {
+        final saleItems = saleItemsMap[row.id] ?? [];
 
         sales.add(Sale(
           id: row.id,

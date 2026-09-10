@@ -12,7 +12,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration {
@@ -53,6 +53,15 @@ class AppDatabase extends _$AppDatabase {
         if (from < 6) {
           // Added 'qr' to PaymentMethod and CreditPaymentMethod enums.
           // Since they are mapped via textEnum() to SQLite TEXT columns, no DDL changes are required.
+        }
+        if (from < 7) {
+          // Add performance indexes
+          await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_sales_customer_phone ON sales(customer_phone);');
+          await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at);');
+          await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_repair_jobs_customer_phone ON repair_jobs(customer_phone);');
+          await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_repair_jobs_status ON repair_jobs(status);');
+          await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_repair_jobs_created_at ON repair_jobs(created_at);');
+          await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_credit_payments_customer_phone ON credit_payments(customer_phone);');
         }
       },
       beforeOpen: (details) async {
