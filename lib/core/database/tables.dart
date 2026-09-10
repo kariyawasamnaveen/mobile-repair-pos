@@ -2,9 +2,9 @@ import 'package:drift/drift.dart';
 
 enum ItemCategory { phone, accessory, sparePart, other }
 enum MovementReason { sale, restock, adjustment, returnItem, repairUsage }
-enum PaymentMethod { cash, card, credit }
+enum PaymentMethod { cash, card, credit, qr }
 enum RepairJobStatus { received, diagnosing, awaitingCustomerApproval, inProgress, readyForPickup, delivered, cancelled }
-enum CreditPaymentMethod { cash, card }
+enum CreditPaymentMethod { cash, card, qr }
 
 @DataClassName('SettingItem')
 class AppSettings extends Table {

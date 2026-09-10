@@ -1,5 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import 'package:pos_system/features/settings/presentation/settings_controller.dart';
 import 'package:pos_system/features/reports/presentation/reports_dashboard_screen.dart';
 
@@ -38,6 +42,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Store settings saved successfully!')));
     }
+  }
+
+  Future<void> _pickQrImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    
+    if (pickedFile != null) {
+      final docDir = await getApplicationDocumentsDirectory();
+      final fileName = 'qr_payment_${DateTime.now().millisecondsSinceEpoch}${p.extension(pickedFile.path)}';
+      final savedImage = await File(pickedFile.path).copy(p.join(docDir.path, fileName));
+      
+      if (!mounted) return;
+      await ref.read(storeSettingsProvider.notifier).updateQrImagePath(savedImage.path);
+    }
+  }
+
+  Future<void> _removeQrImage() async {
+    await ref.read(storeSettingsProvider.notifier).updateQrImagePath(null);
   }
 
   @override
@@ -129,6 +151,50 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   }
                 },
               ),
+              const SizedBox(height: 24),
+              const Text('Payment QR Code', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              if (settings.qrPaymentImagePath != null && settings.qrPaymentImagePath!.isNotEmpty) ...[
+                Center(
+                  child: Image.file(
+                    File(settings.qrPaymentImagePath!),
+                    height: 200,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Text('Error loading image'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton.icon(
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Change'),
+                      onPressed: _pickQrImage,
+                    ),
+                    TextButton.icon(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      label: const Text('Remove', style: TextStyle(color: Colors.red)),
+                      onPressed: _removeQrImage,
+                    ),
+                  ],
+                ),
+              ] else ...[
+                ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(color: Theme.of(context).dividerColor),
+                  ),
+                  leading: const Icon(Icons.qr_code),
+                  title: const Text('No QR Code configured'),
+                  subtitle: const Text('Upload a static payment QR for customers to scan.'),
+                  trailing: ElevatedButton(
+                    onPressed: _pickQrImage,
+                    child: const Text('Upload'),
+                  ),
+                ),
+              ],
+              
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _saveStoreSettings,

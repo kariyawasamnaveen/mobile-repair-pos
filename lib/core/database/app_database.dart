@@ -12,7 +12,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -49,6 +49,10 @@ class AppDatabase extends _$AppDatabase {
           if (!existingTables.contains('credit_payments')) {
             await m.createTable(creditPayments);
           }
+        }
+        if (from < 6) {
+          // Added 'qr' to PaymentMethod and CreditPaymentMethod enums.
+          // Since they are mapped via textEnum() to SQLite TEXT columns, no DDL changes are required.
         }
       },
       beforeOpen: (details) async {

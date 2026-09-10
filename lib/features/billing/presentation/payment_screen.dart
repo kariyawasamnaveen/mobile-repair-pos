@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/features/billing/presentation/billing_controller.dart';
+import 'dart:io';
 import 'package:pos_system/features/billing/presentation/receipt_screen.dart';
+import 'package:pos_system/features/settings/presentation/settings_controller.dart';
+import 'package:pos_system/features/settings/presentation/settings_screen.dart';
 
 class PaymentScreen extends ConsumerStatefulWidget {
   const PaymentScreen({super.key});
@@ -111,8 +114,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     final total = subtotal - discount;
     final isCredit = _paymentMethod == PaymentMethod.credit;
     final isCash = _paymentMethod == PaymentMethod.cash;
+    final isQr = _paymentMethod == PaymentMethod.qr;
     
     final quickAmounts = _getQuickAmounts(total);
+    final settingsState = ref.watch(storeSettingsProvider);
+    final qrImagePath = settingsState.valueOrNull?.qrPaymentImagePath;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Payment')),
@@ -139,6 +145,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                   segments: const [
                     ButtonSegment(value: PaymentMethod.cash, label: Text('Cash')),
                     ButtonSegment(value: PaymentMethod.card, label: Text('Card')),
+                    ButtonSegment(value: PaymentMethod.qr, label: Text('QR')),
                     ButtonSegment(value: PaymentMethod.credit, label: Text('Credit')),
                   ],
                   selected: {_paymentMethod},
@@ -157,6 +164,44 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                 ),
                 
                 const SizedBox(height: 16),
+
+                if (isQr) ...[
+                  if (qrImagePath != null && qrImagePath.isNotEmpty) ...[
+                    const Text('Scan to Pay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16), textAlign: TextAlign.center),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Image.file(
+                        File(qrImagePath),
+                        height: 250,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ] else ...[
+                    Card(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            Icon(Icons.qr_code_scanner, color: Theme.of(context).colorScheme.error, size: 48),
+                            const SizedBox(height: 8),
+                            Text(
+                              'No QR code configured — go to Settings to add one',
+                              style: TextStyle(color: Theme.of(context).colorScheme.error),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 12),
+                            ElevatedButton(
+                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
+                              child: const Text('Go to Settings'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                ],
                 
                 if (isCash) ...[
                   TextField(
@@ -238,9 +283,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: () => _processPayment(total),
+                  onPressed: (isQr && (qrImagePath == null || qrImagePath.isEmpty)) ? null : () => _processPayment(total),
                   style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-                  child: const Text('CONFIRM PAYMENT', style: TextStyle(fontSize: 18)),
+                  child: Text(isQr ? 'CONFIRM PAYMENT RECEIVED' : 'CONFIRM PAYMENT', style: const TextStyle(fontSize: 18)),
                 ),
               ],
             ),

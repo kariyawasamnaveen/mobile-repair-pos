@@ -6,15 +6,17 @@ class StoreSettings {
   final String? address;
   final String? phone;
   final String? defaultReceiptDelivery; // 'print', 'sms', or 'ask'
+  final String? qrPaymentImagePath;
 
-  const StoreSettings({this.name, this.address, this.phone, this.defaultReceiptDelivery});
+  const StoreSettings({this.name, this.address, this.phone, this.defaultReceiptDelivery, this.qrPaymentImagePath});
 
-  StoreSettings copyWith({String? name, String? address, String? phone, String? defaultReceiptDelivery}) {
+  StoreSettings copyWith({String? name, String? address, String? phone, String? defaultReceiptDelivery, String? qrPaymentImagePath}) {
     return StoreSettings(
       name: name ?? this.name,
       address: address ?? this.address,
       phone: phone ?? this.phone,
       defaultReceiptDelivery: defaultReceiptDelivery ?? this.defaultReceiptDelivery,
+      qrPaymentImagePath: qrPaymentImagePath ?? this.qrPaymentImagePath,
     );
   }
 }
@@ -47,12 +49,17 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
     
     final deliveryRes = await _repository.getSetting('default_receipt_delivery');
     deliveryRes.match((_) {}, (val) => defaultReceiptDelivery = val);
+    
+    String? qrPath;
+    final qrRes = await _repository.getSetting('qr_payment_image_path');
+    qrRes.match((_) {}, (val) => qrPath = val);
 
     state = AsyncValue.data(StoreSettings(
       name: name,
       address: address,
       phone: phone,
       defaultReceiptDelivery: defaultReceiptDelivery ?? 'ask',
+      qrPaymentImagePath: qrPath,
     ));
   }
 
@@ -71,12 +78,30 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
       return 'Failed to save some settings';
     }
 
+    // Keep existing QR path
+    final qrPath = state.valueOrNull?.qrPaymentImagePath;
+
     state = AsyncValue.data(StoreSettings(
       name: name,
       address: address,
       phone: phone,
       defaultReceiptDelivery: defaultReceiptDelivery,
+      qrPaymentImagePath: qrPath,
     ));
     return null; // success
+  }
+
+  Future<void> updateQrImagePath(String? path) async {
+    if (path == null) {
+      await _repository.setSetting('qr_payment_image_path', '');
+    } else {
+      await _repository.setSetting('qr_payment_image_path', path);
+    }
+    
+    if (state.hasValue && state.value != null) {
+      state = AsyncValue.data(state.value!.copyWith(qrPaymentImagePath: path ?? ''));
+    } else {
+      _loadStoreSettings();
+    }
   }
 }
