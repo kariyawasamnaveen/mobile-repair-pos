@@ -117,8 +117,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     final isQr = _paymentMethod == PaymentMethod.qr;
     
     final quickAmounts = _getQuickAmounts(total);
-    final settingsState = ref.watch(storeSettingsProvider);
-    final qrImagePath = settingsState.valueOrNull?.qrPaymentImagePath;
+    final qrImagePath = ref.watch(storeSettingsProvider.select((state) => state.valueOrNull?.qrPaymentImagePath));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Payment')),

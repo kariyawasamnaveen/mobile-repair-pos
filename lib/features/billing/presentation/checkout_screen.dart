@@ -84,9 +84,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cart = ref.watch(cartProvider);
+    final isCartEmpty = ref.watch(cartProvider.select((cart) => cart.isEmpty));
+    final totalItems = ref.watch(cartProvider.select((cart) => cart.fold<int>(0, (sum, item) => sum + item.quantity)));
     final inventoryState = ref.watch(inventoryControllerProvider);
-    final totalItems = cart.fold<int>(0, (sum, item) => sum + item.quantity);
 
     return KeyboardListener(
       focusNode: _focusNode,
@@ -101,7 +101,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 IconButton(
                   icon: const Icon(Icons.shopping_cart),
                   onPressed: () {
-                    if (cart.isEmpty) {
+                    if (isCartEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cart is empty'), duration: Duration(seconds: 1)));
                     } else {
                       _openCartSheet();
