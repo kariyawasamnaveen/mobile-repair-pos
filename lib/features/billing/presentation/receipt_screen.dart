@@ -4,28 +4,99 @@ import 'package:pos_system/features/billing/domain/receipt_printer.dart';
 import 'package:pos_system/features/billing/domain/sale.dart';
 import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/features/settings/presentation/settings_controller.dart';
+import 'package:pos_system/core/sms/sms_gateway.dart';
+import 'package:pos_system/features/billing/domain/sms_receipt_generator.dart';
 
 const String receiptFooterPolicy = "Items eligible for exchange within 7 days with this receipt";
 const String receiptFooterGreeting = "Thank you, visit again!";
 
-class ReceiptScreen extends ConsumerWidget {
+class ReceiptScreen extends ConsumerStatefulWidget {
   final Sale sale;
+  const ReceiptScreen({super.key, required this.sale});
+
+  @override
+  ConsumerState<ReceiptScreen> createState() => _ReceiptScreenState();
+}
+
+class _ReceiptScreenState extends ConsumerState<ReceiptScreen> {
   final ReceiptPrinter _printer = LoggingReceiptPrinter();
+  late final TextEditingController _phoneController;
+  bool _isSendingSms = false;
 
-  ReceiptScreen({super.key, required this.sale});
+  @override
+  void initState() {
+    super.initState();
+    _phoneController = TextEditingController(text: widget.sale.customerPhone ?? '');
+  }
 
-  void _printReceipt(BuildContext context, WidgetRef ref) async {
-    final settings = ref.read(storeSettingsProvider).valueOrNull;
-    // Assuming printer uses the settings internally or we can pass them in future
-    await _printer.printReceipt(sale, storeName: settings?.name, storeAddress: settings?.address, storePhone: settings?.phone);
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Receipt sent to printer')));
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  int _calculateSmsPages(int charCount, bool hasUnicode) {
+    if (charCount == 0) return 0;
+    if (hasUnicode) {
+      if (charCount <= 70) return 1;
+      return (charCount / 67).ceil();
+    } else {
+      if (charCount <= 160) return 1;
+      return (charCount / 153).ceil();
+    }
+  }
+
+  bool _containsUnicode(String text) {
+    for (int i = 0; i < text.length; i++) {
+      if (text.codeUnitAt(i) > 127) return true;
+    }
+    return false;
+  }
+
+  void _printReceipt(BuildContext context, StoreSettings? settings) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    await _printer.printReceipt(widget.sale, storeName: settings?.name, storeAddress: settings?.address, storePhone: settings?.phone);
+    if (mounted) {
+      scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Receipt sent to printer')));
+    }
+  }
+
+  Future<void> _sendSmsReceipt(BuildContext context, StoreSettings? settings) async {
+    final phone = _phoneController.text.trim();
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    if (phone.isEmpty) {
+      scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Please enter a phone number')));
+      return;
+    }
+
+    setState(() => _isSendingSms = true);
+    
+    final message = SmsReceiptGenerator.generateReceiptMessage(widget.sale, settings);
+    final gateway = ref.read(smsGatewayProvider);
+    
+    final result = await gateway.sendSms(toPhone: phone, message: message);
+    
+    if (mounted) {
+      setState(() => _isSendingSms = false);
+      result.fold(
+        (failure) {
+          scaffoldMessenger.showSnackBar(SnackBar(content: Text('Failed to send SMS: ${failure.message}'), backgroundColor: Colors.red));
+        },
+        (_) {
+          scaffoldMessenger.showSnackBar(const SnackBar(content: Text('SMS Receipt sent successfully!'), backgroundColor: Colors.green));
+        },
+      );
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final settings = ref.watch(storeSettingsProvider).valueOrNull;
+    final message = SmsReceiptGenerator.generateReceiptMessage(widget.sale, settings);
+    final charCount = message.length;
+    final hasUnicode = _containsUnicode(message);
+    final pageCount = _calculateSmsPages(charCount, hasUnicode);
 
     return Scaffold(
       appBar: AppBar(
@@ -54,12 +125,12 @@ class ReceiptScreen extends ConsumerWidget {
                       Text(settings.phone!, textAlign: TextAlign.center),
                     
                     const SizedBox(height: 16),
-                    Text('Receipt #: ${sale.id.substring(0, 8).toUpperCase()}', textAlign: TextAlign.center),
-                    Text('Date: ${sale.createdAt.toString().split('.')[0]}', textAlign: TextAlign.center),
-                    if (sale.cashierName != null) Text('Served by: ${sale.cashierName}', textAlign: TextAlign.center),
-                    if (sale.customerName != null) Text('Customer: ${sale.customerName}', textAlign: TextAlign.center),
+                    Text('Receipt #: ${widget.sale.id.substring(0, 8).toUpperCase()}', textAlign: TextAlign.center),
+                    Text('Date: ${widget.sale.createdAt.toString().split('.')[0]}', textAlign: TextAlign.center),
+                    if (widget.sale.cashierName != null) Text('Served by: ${widget.sale.cashierName}', textAlign: TextAlign.center),
+                    if (widget.sale.customerName != null) Text('Customer: ${widget.sale.customerName}', textAlign: TextAlign.center),
                     const Divider(height: 32),
-                    ...sale.items.map((item) => Padding(
+                    ...widget.sale.items.map((item) => Padding(
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,31 +148,87 @@ class ReceiptScreen extends ConsumerWidget {
                       ),
                     )),
                     const Divider(height: 32),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Subtotal'), Text('${sale.subtotal}')]),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Discount'), Text('${sale.discount}')]),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Subtotal'), Text('${widget.sale.subtotal}')]),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Discount'), Text('${widget.sale.discount}')]),
                     const SizedBox(height: 8),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), Text('${sale.total}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18))]),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), Text('${widget.sale.total}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18))]),
                     const SizedBox(height: 16),
-                    Text('Payment: ${sale.paymentMethod.name.toUpperCase()}', textAlign: TextAlign.right),
-                    if (sale.paymentMethod == PaymentMethod.cash && sale.amountTendered != null) ...[
-                      Text('Amount Tendered: ${sale.amountTendered}', textAlign: TextAlign.right),
-                      Text('Change Due: ${sale.changeDue}', textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Payment: ${widget.sale.paymentMethod.name.toUpperCase()}', textAlign: TextAlign.right),
+                    if (widget.sale.paymentMethod == PaymentMethod.cash && widget.sale.amountTendered != null) ...[
+                      Text('Amount Tendered: ${widget.sale.amountTendered}', textAlign: TextAlign.right),
+                      Text('Change Due: ${widget.sale.changeDue}', textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold)),
                     ],
-                    if (sale.isCreditSale) ...[
-                      Text('Paid: ${sale.amountPaid}', textAlign: TextAlign.right),
-                      Text('Balance Due: ${sale.balanceDue}', textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    if (widget.sale.isCreditSale) ...[
+                      Text('Paid: ${widget.sale.amountPaid}', textAlign: TextAlign.right),
+                      Text('Balance Due: ${widget.sale.balanceDue}', textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold)),
                     ],
                     const Divider(height: 32),
                     const Text(receiptFooterPolicy, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
                     const SizedBox(height: 4),
                     const Text(receiptFooterGreeting, textAlign: TextAlign.center, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 32),
-                    ElevatedButton.icon(
-                      onPressed: () => _printReceipt(context, ref),
-                      icon: const Icon(Icons.print),
-                      label: const Text('PRINT RECEIPT'),
-                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
+                    
+                    if (settings?.defaultReceiptDelivery == 'print' || settings?.defaultReceiptDelivery == 'ask') ...[
+                      ElevatedButton.icon(
+                        onPressed: () => _printReceipt(context, settings),
+                        icon: const Icon(Icons.print),
+                        label: const Text('PRINT RECEIPT'),
+                        style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Colors.grey.shade300)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Text('SMS Receipt', style: TextStyle(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: _phoneController,
+                              decoration: const InputDecoration(
+                                labelText: 'Customer Phone',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.phone),
+                              ),
+                              keyboardType: TextInputType.phone,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Length: $charCount chars (~$pageCount SMS page${pageCount > 1 ? 's' : ''})',
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: _isSendingSms ? null : () => _sendSmsReceipt(context, settings),
+                              icon: _isSendingSms ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.sms),
+                              label: const Text('SEND SMS RECEIPT'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.all(16),
+                                backgroundColor: Theme.of(context).primaryColor,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
+
+                    if (settings?.defaultReceiptDelivery == 'sms') ...[
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: () => _printReceipt(context, settings),
+                        icon: const Icon(Icons.print),
+                        label: const Text('PRINT INSTEAD'),
+                        style: OutlinedButton.styleFrom(padding: const EdgeInsets.all(16)),
+                      ),
+                    ],
+                    const SizedBox(height: 32),
+
                   ],
                 ),
               ),

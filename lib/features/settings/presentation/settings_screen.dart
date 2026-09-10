@@ -13,6 +13,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _storeNameController = TextEditingController();
   final _storeAddressController = TextEditingController();
   final _storePhoneController = TextEditingController();
+  String _defaultReceiptDelivery = 'ask';
 
   @override
   void dispose() {
@@ -27,6 +28,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       name: _storeNameController.text,
       address: _storeAddressController.text,
       phone: _storePhoneController.text,
+      defaultReceiptDelivery: _defaultReceiptDelivery,
     );
     if (!mounted) return;
     
@@ -56,6 +58,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           if (_storePhoneController.text.isEmpty && settings.phone != null) {
             _storePhoneController.text = settings.phone!;
           }
+          if (settings.defaultReceiptDelivery != null) {
+            _defaultReceiptDelivery = settings.defaultReceiptDelivery!;
+          }
           
           return ListView(
             padding: const EdgeInsets.all(16.0),
@@ -83,6 +88,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _defaultReceiptDelivery,
+                decoration: const InputDecoration(
+                  labelText: 'Default Receipt Delivery',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'ask', child: Text('Ask each time')),
+                  DropdownMenuItem(value: 'print', child: Text('Print by default')),
+                  DropdownMenuItem(value: 'sms', child: Text('SMS by default')),
+                ],
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() {
+                      _defaultReceiptDelivery = val;
+                    });
+                  }
+                },
               ),
               const SizedBox(height: 24),
               ElevatedButton(
