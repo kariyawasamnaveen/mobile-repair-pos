@@ -58,7 +58,7 @@ class RepairSmsNotifier implements RepairNotifier {
           (_) => debugPrint('SMS Notifier Success: Message sent to ${job.customerPhone}'),
         );
       }
-    } catch (e, st) {
+    } catch (e) {
       debugPrint('SMS Notifier Exception: $e');
     }
   }
