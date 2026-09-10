@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/features/settings/presentation/settings_controller.dart';
+import 'package:pos_system/features/reports/presentation/reports_dashboard_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -65,6 +66,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           return ListView(
             padding: const EdgeInsets.all(16.0),
             children: [
+              Card(
+                elevation: 0,
+                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+                child: ListTile(
+                  leading: const Icon(Icons.analytics),
+                  title: const Text('Reports & Analytics', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: const Text('View sales, repairs, and inventory performance'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ReportsDashboardScreen()),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text('Store Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
               TextField(
                 controller: _storeNameController,
                 decoration: const InputDecoration(
