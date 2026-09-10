@@ -159,6 +159,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Image.file(
                     File(settings.qrPaymentImagePath!),
                     height: 200,
+                    cacheHeight: 400,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) => const Text('Error loading image'),
                   ),

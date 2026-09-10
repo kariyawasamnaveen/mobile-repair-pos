@@ -172,6 +172,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                       child: Image.file(
                         File(qrImagePath),
                         height: 250,
+                        cacheHeight: 500,
                         fit: BoxFit.contain,
                       ),
                     ),
