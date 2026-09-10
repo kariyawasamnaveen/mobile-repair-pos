@@ -37,74 +37,101 @@ class CustomerDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // ── Balance header ─────────────────────────────────────────────────
-          _BalanceHeader(
-            customerPhone: customerPhone,
-            customerName: customerName,
-            totalOutstanding: totalOutstanding,
-          ),
-          const SizedBox(height: 16),
+      body: CustomScrollView(
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                // ── Balance header ─────────────────────────────────────────────────
+                _BalanceHeader(
+                  customerPhone: customerPhone,
+                  customerName: customerName,
+                  totalOutstanding: totalOutstanding,
+                ),
+                const SizedBox(height: 16),
 
-          // ── Credit Sales list ──────────────────────────────────────────────
-          _SectionHeader(title: 'Credit Sales', icon: Icons.receipt_long),
+                // ── Credit Sales list ──────────────────────────────────────────────
+                const _SectionHeader(title: 'Credit Sales', icon: Icons.receipt_long),
+              ]),
+            ),
+          ),
+          
           state.sales.when(
             data: (sales) {
               if (sales.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('No credit sales found.'),
+                return const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Text('No credit sales found.'),
+                  ),
                 );
               }
-              return Column(
-                children: sales
-                    .map((s) => _CreditSaleTile(sale: s))
-                    .toList(),
+              return SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverList.builder(
+                  itemCount: sales.length,
+                  itemBuilder: (context, index) => _CreditSaleTile(sale: sales[index]),
+                ),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('Error loading sales: $e'),
+            loading: () => const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator())),
+            error: (e, _) => SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.all(16), child: Text('Error loading sales: $e'))),
           ),
-          const SizedBox(height: 16),
+          
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                const SizedBox(height: 16),
+                // ── Collect Payment button ─────────────────────────────────────────
+                if (totalOutstanding > 0)
+                  ElevatedButton.icon(
+                    onPressed: () => _showCollectPaymentSheet(
+                      context,
+                      ref,
+                      outstanding: totalOutstanding,
+                      sales: state.sales.valueOrNull ?? [],
+                    ),
+                    icon: const Icon(Icons.payments_outlined),
+                    label: const Text('COLLECT PAYMENT'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  ),
+                const SizedBox(height: 24),
 
-          // ── Collect Payment button ─────────────────────────────────────────
-          if (totalOutstanding > 0)
-            ElevatedButton.icon(
-              onPressed: () => _showCollectPaymentSheet(
-                context,
-                ref,
-                outstanding: totalOutstanding,
-                sales: state.sales.valueOrNull ?? [],
-              ),
-              icon: const Icon(Icons.payments_outlined),
-              label: const Text('COLLECT PAYMENT'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              ),
+                // ── Payment History ────────────────────────────────────────────────
+                const _SectionHeader(title: 'Payment History', icon: Icons.history),
+              ]),
             ),
-          const SizedBox(height: 24),
-
-          // ── Payment History ────────────────────────────────────────────────
-          _SectionHeader(title: 'Payment History', icon: Icons.history),
+          ),
+          
           state.payments.when(
             data: (payments) {
               if (payments.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('No payments recorded yet.'),
+                return const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Text('No payments recorded yet.'),
+                  ),
                 );
               }
-              return Column(
-                children: payments.map((p) => _PaymentHistoryTile(payment: p)).toList(),
+              return SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverList.builder(
+                  itemCount: payments.length,
+                  itemBuilder: (context, index) => _PaymentHistoryTile(payment: payments[index]),
+                ),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('Error loading payment history: $e'),
+            loading: () => const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator())),
+            error: (e, _) => SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.all(16), child: Text('Error loading payment history: $e'))),
           ),
+          
+          const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
         ],
       ),
     );
