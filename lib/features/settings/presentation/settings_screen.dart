@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:pos_system/features/settings/presentation/settings_controller.dart';
 import 'package:pos_system/features/reports/presentation/reports_dashboard_screen.dart';
+import 'package:pos_system/core/backup/backup_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -60,6 +61,125 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _removeQrImage() async {
     await ref.read(storeSettingsProvider.notifier).updateQrImagePath(null);
+  }
+
+  Future<void> _showRestoreDialog(BuildContext context) async {
+    final backupService = ref.read(backupServiceProvider);
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        title: Text('Loading backups...'),
+        content: SizedBox(height: 50, child: Center(child: CircularProgressIndicator())),
+      ),
+    );
+
+    final res = await backupService.listBackups();
+    if (!context.mounted) return;
+    Navigator.pop(context); // Close loading dialog
+
+    res.fold(
+      (failure) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure.message))),
+      (backups) {
+        if (backups.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No backups found in the cloud.')));
+          return;
+        }
+
+        showModalBottomSheet(
+          context: context,
+          builder: (context) {
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const ListTile(
+                    title: Text('Select Backup to Restore', style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('WARNING: This will replace ALL current data!', style: TextStyle(color: Colors.red)),
+                  ),
+                  const Divider(),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: backups.length,
+                      itemBuilder: (context, index) {
+                        final file = backups[index];
+                        final timeString = file.name.replaceAll('backup_', '').replaceAll('.sqlite', '').replaceAll('-', ':').replaceFirst(':', '-').replaceFirst(':', '-');
+                        final fileDate = DateTime.tryParse(timeString);
+                        
+                        return ListTile(
+                          leading: const Icon(Icons.cloud_download),
+                          title: Text(fileDate != null ? fileDate.toLocal().toString().split('.')[0] : file.name),
+                          subtitle: Text('${(file.metadata?['size'] ?? 0) ~/ 1024} KB'),
+                          onTap: () {
+                            Navigator.pop(context); // Close sheet
+                            _confirmRestore(context, file.name);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmRestore(BuildContext context, String fileName) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Are you absolutely sure?', style: TextStyle(color: Colors.red)),
+        content: const Text('This will DELETE all current local data and replace it with the selected backup. This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('RESTORE DATA'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          title: Text('Restoring...'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Downloading and applying backup. The app will close after completion.'),
+            ],
+          ),
+        ),
+      );
+
+      final res = await ref.read(backupServiceProvider).restoreDatabase(fileName);
+      if (!context.mounted) return;
+      
+      res.fold(
+        (failure) {
+          Navigator.pop(context); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Restore failed: ${failure.message}')));
+        },
+        (_) {
+          // Success! App state is now inconsistent because DB was swapped underneath Drift.
+          // The safest way to handle SQLite file swap in a running app is to crash/exit and let the user restart.
+          exit(0);
+        },
+      );
+    }
   }
 
   @override
@@ -197,9 +317,68 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
               
               const SizedBox(height: 24),
+              const Text('Database Backup', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Card(
+                elevation: 0,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Last Backup: ${settings.lastBackupAt != null ? settings.lastBackupAt!.toLocal().toString().split('.')[0] : 'Never'}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Backups are securely stored in the cloud. A backup is automatically run once daily on startup.',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              icon: const Icon(Icons.cloud_upload),
+                              label: const Text('Backup Now'),
+                              onPressed: () async {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Starting backup...')));
+                                final res = await ref.read(backupServiceProvider).backupDatabase();
+                                if (mounted) {
+                                  res.fold(
+                                    (failure) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure.message))),
+                                    (_) {
+                                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backup successful!')));
+                                      // Force reload settings to show new timestamp
+                                      ref.read(storeSettingsProvider.notifier).loadStoreSettings();
+                                    },
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.restore),
+                              label: const Text('Restore'),
+                              style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                              onPressed: () => _showRestoreDialog(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _saveStoreSettings,
-                child: const Text('Save'),
+                child: const Text('Save Settings'),
               ),
             ],
           );

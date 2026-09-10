@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/core/database/app_database.dart';
 import 'package:pos_system/core/error/failure.dart';
 import 'package:pos_system/providers/app_providers.dart';
+import 'package:uuid/uuid.dart';
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepository(ref.watch(databaseProvider));
@@ -36,5 +37,41 @@ class SettingsRepository {
     } catch (e, st) {
       return Left(Failure('Failed to set setting', error: e, stackTrace: st));
     }
+  }
+
+  Future<Either<Failure, String>> getOrCreateInstallId() async {
+    final existingRes = await getSetting('install_id');
+    return existingRes.fold(
+      (l) => Left(l),
+      (id) async {
+        if (id != null && id.isNotEmpty) {
+          return Right(id);
+        }
+        // Generate new UUID
+        const uuid = Uuid();
+        final newId = uuid.v4();
+        final saveRes = await setSetting('install_id', newId);
+        return saveRes.fold(
+          (l) => Left(l),
+          (_) => Right(newId),
+        );
+      }
+    );
+  }
+
+  Future<Either<Failure, DateTime?>> getLastBackupTime() async {
+    final res = await getSetting('last_backup_at');
+    return res.fold(
+      (l) => Left(l),
+      (val) {
+        if (val == null || val.isEmpty) return const Right(null);
+        final dt = DateTime.tryParse(val);
+        return Right(dt);
+      }
+    );
+  }
+
+  Future<Either<Failure, Unit>> setLastBackupTime(DateTime dt) async {
+    return setSetting('last_backup_at', dt.toIso8601String());
   }
 }

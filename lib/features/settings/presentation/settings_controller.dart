@@ -7,16 +7,18 @@ class StoreSettings {
   final String? phone;
   final String? defaultReceiptDelivery; // 'print', 'sms', or 'ask'
   final String? qrPaymentImagePath;
+  final DateTime? lastBackupAt;
 
-  const StoreSettings({this.name, this.address, this.phone, this.defaultReceiptDelivery, this.qrPaymentImagePath});
+  const StoreSettings({this.name, this.address, this.phone, this.defaultReceiptDelivery, this.qrPaymentImagePath, this.lastBackupAt});
 
-  StoreSettings copyWith({String? name, String? address, String? phone, String? defaultReceiptDelivery, String? qrPaymentImagePath}) {
+  StoreSettings copyWith({String? name, String? address, String? phone, String? defaultReceiptDelivery, String? qrPaymentImagePath, DateTime? lastBackupAt}) {
     return StoreSettings(
       name: name ?? this.name,
       address: address ?? this.address,
       phone: phone ?? this.phone,
       defaultReceiptDelivery: defaultReceiptDelivery ?? this.defaultReceiptDelivery,
       qrPaymentImagePath: qrPaymentImagePath ?? this.qrPaymentImagePath,
+      lastBackupAt: lastBackupAt ?? this.lastBackupAt,
     );
   }
 }
@@ -29,10 +31,10 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
   final SettingsRepository _repository;
 
   StoreSettingsNotifier(this._repository) : super(const AsyncValue.loading()) {
-    _loadStoreSettings();
+    loadStoreSettings();
   }
 
-  Future<void> _loadStoreSettings() async {
+  Future<void> loadStoreSettings() async {
     state = const AsyncValue.loading();
     final nameRes = await _repository.getSetting('store_name');
     final addressRes = await _repository.getSetting('store_address');
@@ -54,12 +56,17 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
     final qrRes = await _repository.getSetting('qr_payment_image_path');
     qrRes.match((_) {}, (val) => qrPath = val);
 
+    final backupRes = await _repository.getLastBackupTime();
+    DateTime? lastBackupAt;
+    backupRes.match((_) {}, (val) => lastBackupAt = val);
+
     state = AsyncValue.data(StoreSettings(
       name: name,
       address: address,
       phone: phone,
       defaultReceiptDelivery: defaultReceiptDelivery ?? 'ask',
       qrPaymentImagePath: qrPath,
+      lastBackupAt: lastBackupAt,
     ));
   }
 
@@ -78,8 +85,9 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
       return 'Failed to save some settings';
     }
 
-    // Keep existing QR path
+    // Keep existing QR path and backup time
     final qrPath = state.valueOrNull?.qrPaymentImagePath;
+    final lastBackupAt = state.valueOrNull?.lastBackupAt;
 
     state = AsyncValue.data(StoreSettings(
       name: name,
@@ -87,6 +95,7 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
       phone: phone,
       defaultReceiptDelivery: defaultReceiptDelivery,
       qrPaymentImagePath: qrPath,
+      lastBackupAt: lastBackupAt,
     ));
     return null; // success
   }
@@ -101,7 +110,7 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
     if (state.hasValue && state.value != null) {
       state = AsyncValue.data(state.value!.copyWith(qrPaymentImagePath: path ?? ''));
     } else {
-      _loadStoreSettings();
+      loadStoreSettings();
     }
   }
 }

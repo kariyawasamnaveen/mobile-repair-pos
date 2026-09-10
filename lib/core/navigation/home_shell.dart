@@ -5,15 +5,49 @@ import 'package:pos_system/features/inventory/presentation/inventory_screen.dart
 import 'package:pos_system/features/repair_jobs/presentation/repair_job_list_screen.dart';
 import 'package:pos_system/features/settings/presentation/settings_screen.dart';
 
-class HomeShell extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pos_system/core/backup/backup_service.dart';
+import 'package:pos_system/features/settings/data/settings_repository.dart';
+import 'dart:developer' as developer;
+
+class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
   @override
-  State<HomeShell> createState() => _HomeShellState();
+  ConsumerState<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends ConsumerState<HomeShell> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAndRunBackup();
+  }
+
+  Future<void> _checkAndRunBackup() async {
+    try {
+      final settingsRepo = ref.read(settingsRepositoryProvider);
+      final lastBackupRes = await settingsRepo.getLastBackupTime();
+      if (lastBackupRes.isRight()) {
+        final lastBackup = lastBackupRes.getRight().toNullable();
+        if (lastBackup == null || DateTime.now().difference(lastBackup).inHours >= 24) {
+          developer.log('Triggering automatic daily backup...', name: 'HomeShell');
+          final backupService = ref.read(backupServiceProvider);
+          // Run in background without awaiting or blocking UI
+          backupService.backupDatabase().then((res) {
+            res.fold(
+              (failure) => developer.log('Auto backup failed: ${failure.message}', name: 'HomeShell'),
+              (_) => developer.log('Auto backup succeeded', name: 'HomeShell'),
+            );
+          });
+        }
+      }
+    } catch (e) {
+      developer.log('Failed to check backup status: $e', name: 'HomeShell');
+    }
+  }
 
   static const _pages = [
     CheckoutScreen(),
