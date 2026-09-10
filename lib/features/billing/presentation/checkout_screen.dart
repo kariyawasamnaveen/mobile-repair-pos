@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/core/database/tables.dart';
+import 'package:pos_system/core/scanning/camera_scanner_sheet.dart';
 import 'package:pos_system/features/billing/presentation/billing_controller.dart';
 import 'package:pos_system/features/inventory/domain/item.dart';
 import 'package:pos_system/features/inventory/presentation/inventory_controller.dart';
@@ -93,16 +94,31 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: const InputDecoration(
-                        labelText: 'Search / Scan Items',
-                        prefixIcon: Icon(Icons.search),
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (val) {
-                        ref.read(inventoryControllerProvider.notifier).setSearchQuery(val);
-                      },
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: const InputDecoration(
+                              labelText: 'Search / Scan Items',
+                              prefixIcon: Icon(Icons.search),
+                              border: OutlineInputBorder(),
+                            ),
+                            onChanged: (val) {
+                              ref.read(inventoryControllerProvider.notifier).setSearchQuery(val);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          tooltip: 'Scan barcode with camera',
+                          icon: const Icon(Icons.qr_code_scanner),
+                          onPressed: () async {
+                            final result = await showCameraScannerSheet(context);
+                            if (result != null) _handleScan(result);
+                          },
+                        ),
+                      ],
                     ),
                   ),
                   Expanded(

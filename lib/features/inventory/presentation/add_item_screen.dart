@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/core/database/tables.dart';
+import 'package:pos_system/core/scanning/camera_scanner_sheet.dart';
 import 'package:pos_system/features/inventory/domain/item.dart';
 import 'package:pos_system/features/inventory/presentation/inventory_controller.dart';
 
@@ -103,9 +104,26 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                 decoration: const InputDecoration(labelText: 'Item Name *'),
                 validator: (val) => val == null || val.isEmpty ? 'Required' : null,
               ),
-              TextFormField(
-                controller: _barcodeController,
-                decoration: const InputDecoration(labelText: 'Barcode (Scan or Type)'),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _barcodeController,
+                      decoration: const InputDecoration(labelText: 'Barcode (Scan or Type)'),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Scan with camera',
+                    icon: const Icon(Icons.qr_code_scanner),
+                    onPressed: () async {
+                      final result = await showCameraScannerSheet(context);
+                      if (result != null) {
+                        setState(() => _barcodeController.text = result);
+                      }
+                    },
+                  ),
+                ],
               ),
               DropdownButtonFormField<ItemCategory>(
                 initialValue: _category,
@@ -163,6 +181,19 @@ class _AddItemScreenState extends ConsumerState<AddItemScreen> {
                       ),
                     ),
                     IconButton(
+                      tooltip: 'Scan IMEI with camera',
+                      icon: const Icon(Icons.qr_code_scanner),
+                      onPressed: () async {
+                        final result = await showCameraScannerSheet(context);
+                        if (result != null && mounted) {
+                          setState(() {
+                            _imeis.add(result);
+                          });
+                        }
+                      },
+                    ),
+                    IconButton(
+                      tooltip: 'Add typed IMEI',
                       icon: const Icon(Icons.add),
                       onPressed: () {
                         if (_imeiController.text.isNotEmpty) {

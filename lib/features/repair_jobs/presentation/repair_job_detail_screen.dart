@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/core/database/tables.dart';
+import 'package:pos_system/core/scanning/camera_scanner_sheet.dart';
 import 'package:pos_system/features/repair_jobs/domain/repair_job.dart';
 import 'package:pos_system/features/repair_jobs/presentation/repair_jobs_controller.dart';
+import 'package:pos_system/features/inventory/presentation/inventory_controller.dart';
 import 'package:pos_system/features/inventory/presentation/item_search_delegate.dart';
 
 class RepairJobDetailScreen extends ConsumerStatefulWidget {
@@ -76,6 +78,49 @@ class _RepairJobDetailScreenState extends ConsumerState<RepairJobDetailScreen> {
 
     final controller = ref.read(repairJobsControllerProvider);
     final res = await controller.addSparePart(jobId: job.id, itemId: item.id, quantity: qty);
+    if (!mounted) return;
+    if (res.isLeft()) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res.fold((l) => l.message, (r) => ''))));
+    }
+  }
+
+  /// Scan a part barcode with the camera, resolve it to an inventory item,
+  /// then hand off to the same confirmation + add flow as [_addSparePart].
+  void _scanAndAddSparePart(RepairJob job) async {
+    final scanned = await showCameraScannerSheet(context);
+    if (scanned == null || !mounted) return;
+
+    // Look up the item by barcode or internal code from the current inventory list.
+    final inventoryAsync = ref.read(inventoryControllerProvider);
+    final allItems = inventoryAsync.valueOrNull ?? [];
+    final match = allItems.where((i) =>
+      i.barcode == scanned || i.internalCode == scanned,
+    ).firstOrNull;
+
+    if (!mounted) return;
+    if (match == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No item found for code: $scanned')),
+      );
+      return;
+    }
+
+    // Reuse the same confirmation + repository call as the search-based path.
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Add ${match.name}'),
+        content: Text('Quantity: 1 (Stock: ${match.quantity})'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Add')),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+
+    final controller = ref.read(repairJobsControllerProvider);
+    final res = await controller.addSparePart(jobId: job.id, itemId: match.id, quantity: 1);
     if (!mounted) return;
     if (res.isLeft()) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res.fold((l) => l.message, (r) => ''))));
@@ -164,10 +209,20 @@ class _RepairJobDetailScreenState extends ConsumerState<RepairJobDetailScreen> {
                         children: [
                           const Text('Spare Parts Used', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                           if (!isDelivered)
-                            TextButton.icon(
-                              onPressed: () => _addSparePart(job),
-                              icon: const Icon(Icons.add),
-                              label: const Text('Add Part'),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Scan part barcode',
+                                  icon: const Icon(Icons.qr_code_scanner),
+                                  onPressed: () => _scanAndAddSparePart(job),
+                                ),
+                                TextButton.icon(
+                                  onPressed: () => _addSparePart(job),
+                                  icon: const Icon(Icons.search),
+                                  label: const Text('Search Part'),
+                                ),
+                              ],
                             ),
                         ],
                       ),
