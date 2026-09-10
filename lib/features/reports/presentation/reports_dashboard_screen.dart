@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/features/reports/domain/reports_models.dart';
 import 'package:pos_system/features/reports/presentation/reports_controller.dart';
+import 'package:pos_system/features/reports/domain/pdf_report_generator.dart';
+import 'package:printing/printing.dart';
 
 class ReportsDashboardScreen extends ConsumerStatefulWidget {
   const ReportsDashboardScreen({super.key});
@@ -21,6 +23,25 @@ class _ReportsDashboardScreenState extends ConsumerState<ReportsDashboardScreen>
         appBar: AppBar(
           title: const Text('Reports'),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.picture_as_pdf),
+              tooltip: 'Generate Monthly Report',
+              onPressed: () async {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Generating PDF Report...')));
+                final res = await ref.read(pdfReportGeneratorProvider).generateMonthlyReport(DateTime.now());
+                if (mounted) {
+                  res.fold(
+                    (l) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.message))),
+                    (bytes) async {
+                      await Printing.layoutPdf(
+                        onLayout: (_) => bytes,
+                        name: 'Monthly_Report_${DateTime.now().toIso8601String().split('T').first}.pdf',
+                      );
+                    },
+                  );
+                }
+              },
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: DropdownButton<DateRangeType>(
