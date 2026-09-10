@@ -30,9 +30,15 @@ class SmsReceiptGenerator {
       buffer.writeln('${item.itemName} x${item.quantitySold} - LKR ${item.unitPriceAtSale}');
     }
     
-    buffer.writeln('Total: LKR ${sale.total} (${sale.paymentMethod.name.toUpperCase()})');
-    if (sale.paymentMethod == PaymentMethod.cash && sale.changeDue != null && sale.changeDue! > 0) {
-      buffer.writeln('Change: LKR ${sale.changeDue}');
+    if (sale.isCreditSale) {
+      buffer.writeln('Total: LKR ${sale.total}');
+      buffer.writeln('Paid Now: LKR ${sale.amountPaid.toStringAsFixed(2)}');
+      buffer.writeln('Balance Due: LKR ${sale.balanceDue.toStringAsFixed(2)}');
+    } else {
+      buffer.writeln('Total: LKR ${sale.total} (${sale.paymentMethod.name.toUpperCase()})');
+      if (sale.paymentMethod == PaymentMethod.cash && sale.changeDue != null && sale.changeDue! > 0) {
+        buffer.writeln('Change: LKR ${sale.changeDue}');
+      }
     }
     
     buffer.write('Thank you!');
