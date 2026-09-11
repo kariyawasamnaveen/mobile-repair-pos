@@ -7,6 +7,7 @@ import 'package:pos_system/features/billing/domain/sale.dart';
 import 'package:pos_system/features/inventory/domain/item.dart';
 import 'package:pos_system/features/inventory/presentation/inventory_controller.dart';
 import 'package:pos_system/features/auth/presentation/auth_controller.dart';
+import 'package:pos_system/features/settings/presentation/settings_controller.dart';
 
 final cartProvider = StateNotifierProvider<CartNotifier, List<CartItem>>((ref) {
   return CartNotifier();
@@ -136,7 +137,28 @@ class CheckoutController {
 
     final subtotal = _ref.read(cartProvider.notifier).subtotal;
     final discount = _ref.read(discountProvider);
-    final total = subtotal - discount;
+    
+    final settings = _ref.read(storeSettingsProvider).valueOrNull;
+    final isTaxEnabled = settings?.isTaxEnabled ?? false;
+    final taxRate = settings?.taxRate ?? 0.0;
+    final isTaxInclusive = settings?.isTaxInclusive ?? false;
+
+    double total = subtotal - discount;
+    double? taxAmount;
+    double? taxRateApplied;
+
+    if (isTaxEnabled && taxRate > 0) {
+      taxRateApplied = taxRate;
+      if (isTaxInclusive) {
+        // total = subtotal - discount
+        taxAmount = total - (total / (1 + taxRate / 100));
+      } else {
+        // Tax exclusive
+        taxAmount = total * (taxRate / 100);
+        total += taxAmount;
+      }
+    }
+
     final balanceDue = isCreditSale ? total - amountPaid : 0.0;
     
     if (paymentMethod == PaymentMethod.cash) {
@@ -153,6 +175,8 @@ class CheckoutController {
       cart: cart,
       subtotal: subtotal,
       discount: discount,
+      taxAmount: taxAmount,
+      taxRateApplied: taxRateApplied,
       total: total,
       paymentMethod: paymentMethod,
       customerName: customerName,

@@ -19,13 +19,14 @@ class ReportsRepository {
     try {
       final vars = [Variable.withDateTime(range.start), Variable.withDateTime(range.end)];
       
-      // 1. Sales revenue & transactions
+      // 1. Sales revenue, transactions, and tax
       final salesRes = await _db.customSelect(
-        'SELECT SUM(total) as revenue, COUNT(*) as count FROM sales WHERE created_at >= ? AND created_at <= ?',
+        'SELECT SUM(total) as revenue, COUNT(*) as count, SUM(tax_amount) as tax FROM sales WHERE created_at >= ? AND created_at <= ?',
         variables: vars,
       ).getSingle();
       final totalSalesRevenue = salesRes.read<double?>('revenue') ?? 0.0;
       final totalTransactions = salesRes.read<int?>('count') ?? 0;
+      final totalTaxCollected = salesRes.read<double?>('tax') ?? 0.0;
       
       // 2. Repair jobs revenue
       final repairRes = await _db.customSelect(
@@ -50,6 +51,7 @@ class ReportsRepository {
         totalSalesRevenue: totalSalesRevenue,
         totalTransactions: totalTransactions,
         totalRepairRevenue: totalRepairRevenue,
+        totalTaxCollected: totalTaxCollected,
         outstandingCredit: outstandingCredit,
         lowStockItemsCount: lowStockCount,
       ));

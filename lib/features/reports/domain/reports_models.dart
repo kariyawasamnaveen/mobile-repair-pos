@@ -11,6 +11,7 @@ class DashboardSummary {
   final double totalSalesRevenue;
   final int totalTransactions;
   final double totalRepairRevenue;
+  final double totalTaxCollected;
   final double outstandingCredit; // snapshot
   final int lowStockItemsCount; // snapshot
   
@@ -18,6 +19,7 @@ class DashboardSummary {
     required this.totalSalesRevenue,
     required this.totalTransactions,
     required this.totalRepairRevenue,
+    required this.totalTaxCollected,
     required this.outstandingCredit,
     required this.lowStockItemsCount,
   });

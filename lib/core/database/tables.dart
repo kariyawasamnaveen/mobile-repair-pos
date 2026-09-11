@@ -66,6 +66,8 @@ class Sales extends Table {
   TextColumn get customerPhone => text().nullable()();
   RealColumn get subtotal => real()();
   RealColumn get discount => real().withDefault(const Constant(0.0))();
+  RealColumn get taxAmount => real().nullable()();
+  RealColumn get taxRateApplied => real().nullable()();
   RealColumn get total => real()();
   TextColumn get paymentMethod => textEnum<PaymentMethod>()();
   BoolColumn get isCreditSale => boolean().withDefault(const Constant(false))();

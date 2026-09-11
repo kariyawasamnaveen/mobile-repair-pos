@@ -8,6 +8,7 @@ import 'package:pos_system/features/inventory/domain/item.dart';
 import 'package:pos_system/features/inventory/presentation/inventory_controller.dart';
 import 'package:pos_system/features/billing/presentation/payment_screen.dart';
 import 'package:pos_system/core/theme/app_theme.dart';
+import 'package:pos_system/features/settings/presentation/settings_controller.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -266,7 +267,25 @@ class CartBottomSheet extends ConsumerWidget {
     final cart = ref.watch(cartProvider);
     final subtotal = ref.watch(cartProvider.notifier).subtotal;
     final discount = ref.watch(discountProvider);
-    final total = subtotal - discount;
+    
+    final settings = ref.watch(storeSettingsProvider).valueOrNull;
+    final isTaxEnabled = settings?.isTaxEnabled ?? false;
+    final taxRate = settings?.taxRate ?? 0.0;
+    final taxName = settings?.taxName ?? 'Tax';
+    final isTaxInclusive = settings?.isTaxInclusive ?? false;
+
+    double total = subtotal - discount;
+    double? taxAmount;
+
+    if (isTaxEnabled && taxRate > 0) {
+      if (isTaxInclusive) {
+        taxAmount = total - (total / (1 + taxRate / 100));
+      } else {
+        taxAmount = total * (taxRate / 100);
+        total += taxAmount;
+      }
+    }
+
     final theme = Theme.of(context);
 
     return Container(
@@ -455,6 +474,25 @@ class CartBottomSheet extends ConsumerWidget {
                     ),
                   ],
                 ),
+                if (isTaxEnabled && taxAmount != null) ...[
+                  const SizedBox(height: AppThemeConstants.spacing8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('$taxName ($taxRate%${isTaxInclusive ? ' incl.' : ''}):', style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                      const SizedBox(width: AppThemeConstants.spacing8),
+                      Expanded(
+                        child: Text(
+                          'LKR ${taxAmount.toStringAsFixed(2)}',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          textAlign: TextAlign.right,
+                          style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 Divider(height: AppThemeConstants.spacing24, color: theme.dividerColor),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,

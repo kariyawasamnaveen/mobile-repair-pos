@@ -12,7 +12,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration {
@@ -75,6 +75,10 @@ class AppDatabase extends _$AppDatabase {
             await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_activity_logs_staff_id ON activity_logs(staff_id);');
             await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_activity_logs_timestamp ON activity_logs(timestamp);');
           }
+        }
+        if (from < 9) {
+          try { await m.addColumn(sales, sales.taxAmount); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
+          try { await m.addColumn(sales, sales.taxRateApplied); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
         }
       },
       beforeOpen: (details) async {

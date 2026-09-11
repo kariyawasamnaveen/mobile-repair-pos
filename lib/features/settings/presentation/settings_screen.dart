@@ -26,12 +26,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _storeAddressController = TextEditingController();
   final _storePhoneController = TextEditingController();
   String _defaultReceiptDelivery = 'ask';
+  
+  bool _isTaxEnabled = false;
+  final _taxNameController = TextEditingController();
+  final _taxRateController = TextEditingController();
+  bool _isTaxInclusive = false;
+  bool _taxInitialized = false;
 
   @override
   void dispose() {
     _storeNameController.dispose();
     _storeAddressController.dispose();
     _storePhoneController.dispose();
+    _taxNameController.dispose();
+    _taxRateController.dispose();
     super.dispose();
   }
 
@@ -41,6 +49,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       address: _storeAddressController.text,
       phone: _storePhoneController.text,
       defaultReceiptDelivery: _defaultReceiptDelivery,
+      isTaxEnabled: _isTaxEnabled,
+      taxName: _taxNameController.text,
+      taxRate: double.tryParse(_taxRateController.text) ?? 0.0,
+      isTaxInclusive: _isTaxInclusive,
     );
     if (!mounted) return;
     
@@ -229,6 +241,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _defaultReceiptDelivery = settings.defaultReceiptDelivery!;
           }
           
+          if (!_taxInitialized) {
+            _isTaxEnabled = settings.isTaxEnabled ?? false;
+            _taxNameController.text = settings.taxName ?? 'VAT';
+            _taxRateController.text = (settings.taxRate ?? 0.0).toString();
+            _isTaxInclusive = settings.isTaxInclusive ?? false;
+            _taxInitialized = true;
+          }
+          
           final isOwner = ref.watch(authStateProvider)?.isOwner == true;
 
           return ListView(
@@ -349,8 +369,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
               ],
+
+              const SizedBox(height: AppThemeConstants.spacing24),
+              Text('Tax Settings', style: theme.textTheme.titleMedium),
+              const SizedBox(height: AppThemeConstants.spacing12),
+              SwitchListTile(
+                title: const Text('Enable Tax Calculation'),
+                value: _isTaxEnabled,
+                onChanged: (val) => setState(() => _isTaxEnabled = val),
+              ),
+              if (_isTaxEnabled) ...[
+                const SizedBox(height: AppThemeConstants.spacing12),
+                TextField(
+                  controller: _taxNameController,
+                  decoration: const InputDecoration(labelText: 'Tax Name (e.g. VAT)'),
+                ),
+                const SizedBox(height: AppThemeConstants.spacing16),
+                TextField(
+                  controller: _taxRateController,
+                  decoration: const InputDecoration(labelText: 'Tax Rate (%)'),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                ),
+                const SizedBox(height: AppThemeConstants.spacing16),
+                SwitchListTile(
+                  title: const Text('Tax-inclusive pricing'),
+                  subtitle: const Text('Inclusive: item prices already include tax (tax is extracted from the total).\nExclusive: tax is added on top of the subtotal.'),
+                  value: _isTaxInclusive,
+                  onChanged: (val) => setState(() => _isTaxInclusive = val),
+                ),
+              ],
               
               const SizedBox(height: AppThemeConstants.spacing24),
+              const Divider(),
               Text('Database Backup', style: theme.textTheme.titleMedium),
               const SizedBox(height: AppThemeConstants.spacing12),
               Card(

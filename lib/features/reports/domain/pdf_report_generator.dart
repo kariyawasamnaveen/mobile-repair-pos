@@ -167,6 +167,7 @@ class PdfReportGenerator {
         children: [
           _buildSummaryItem('Total Revenue', currency.format(dashboard.totalSalesRevenue + dashboard.totalRepairRevenue)),
           _buildSummaryItem('Transactions', dashboard.totalTransactions.toString()),
+          _buildSummaryItem('Total Tax', currency.format(dashboard.totalTaxCollected)),
           _buildSummaryItem('Out. Credit', currency.format(dashboard.outstandingCredit)),
           _buildSummaryItem('Low Stock', dashboard.lowStockItemsCount.toString()),
         ],

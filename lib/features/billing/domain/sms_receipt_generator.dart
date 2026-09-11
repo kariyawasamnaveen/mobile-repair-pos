@@ -30,6 +30,11 @@ class SmsReceiptGenerator {
       buffer.writeln('${item.itemName} x${item.quantitySold} - LKR ${item.unitPriceAtSale}');
     }
     
+    if (sale.taxAmount != null) {
+      final taxName = settings?.taxName ?? 'Tax';
+      buffer.writeln('$taxName: LKR ${sale.taxAmount!.toStringAsFixed(2)}');
+    }
+    
     if (sale.isCreditSale) {
       buffer.writeln('Total: LKR ${sale.total}');
       buffer.writeln('Paid Now: LKR ${sale.amountPaid.toStringAsFixed(2)}');

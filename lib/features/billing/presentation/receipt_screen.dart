@@ -150,6 +150,8 @@ class _ReceiptScreenState extends ConsumerState<ReceiptScreen> {
                     const Divider(height: 32),
                     Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Subtotal'), Text('${widget.sale.subtotal}')]),
                     Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Discount'), Text('${widget.sale.discount}')]),
+                    if (widget.sale.taxAmount != null)
+                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Tax (${widget.sale.taxRateApplied}%)'), Text(widget.sale.taxAmount!.toStringAsFixed(2))]),
                     const SizedBox(height: 8),
                     Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), Text('${widget.sale.total}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18))]),
                     const SizedBox(height: 16),

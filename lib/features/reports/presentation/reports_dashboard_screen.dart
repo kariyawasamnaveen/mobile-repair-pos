@@ -141,6 +141,13 @@ class _SummaryTab extends ConsumerWidget {
               icon: Icons.build_circle_outlined,
               color: AppTheme.warningColor,
             ),
+            const SizedBox(height: AppThemeConstants.spacing8),
+            _SummaryCard(
+              title: 'Total Tax Collected',
+              value: 'LKR ${summary.totalTaxCollected.toStringAsFixed(2)}',
+              icon: Icons.account_balance,
+              color: theme.colorScheme.tertiary,
+            ),
             const SizedBox(height: AppThemeConstants.spacing24),
             Text('Snapshots (Current)', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant)),
             const SizedBox(height: AppThemeConstants.spacing8),

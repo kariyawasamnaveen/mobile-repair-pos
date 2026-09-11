@@ -22,6 +22,8 @@ class Sale {
   final String? customerPhone;
   final double subtotal;
   final double discount;
+  final double? taxAmount;
+  final double? taxRateApplied;
   final double total;
   final PaymentMethod paymentMethod;
   final bool isCreditSale;
@@ -39,6 +41,8 @@ class Sale {
     this.customerPhone,
     required this.subtotal,
     required this.discount,
+    this.taxAmount,
+    this.taxRateApplied,
     required this.total,
     required this.paymentMethod,
     required this.isCreditSale,

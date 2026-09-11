@@ -9,10 +9,36 @@ class StoreSettings {
   final String? defaultReceiptDelivery; // 'print', 'sms', or 'ask'
   final String? qrPaymentImagePath;
   final DateTime? lastBackupAt;
+  final bool? isTaxEnabled;
+  final String? taxName;
+  final double? taxRate;
+  final bool? isTaxInclusive;
 
-  const StoreSettings({this.name, this.address, this.phone, this.defaultReceiptDelivery, this.qrPaymentImagePath, this.lastBackupAt});
+  const StoreSettings({
+    this.name, 
+    this.address, 
+    this.phone, 
+    this.defaultReceiptDelivery, 
+    this.qrPaymentImagePath, 
+    this.lastBackupAt,
+    this.isTaxEnabled,
+    this.taxName,
+    this.taxRate,
+    this.isTaxInclusive,
+  });
 
-  StoreSettings copyWith({String? name, String? address, String? phone, String? defaultReceiptDelivery, String? qrPaymentImagePath, DateTime? lastBackupAt}) {
+  StoreSettings copyWith({
+    String? name, 
+    String? address, 
+    String? phone, 
+    String? defaultReceiptDelivery, 
+    String? qrPaymentImagePath, 
+    DateTime? lastBackupAt,
+    bool? isTaxEnabled,
+    String? taxName,
+    double? taxRate,
+    bool? isTaxInclusive,
+  }) {
     return StoreSettings(
       name: name ?? this.name,
       address: address ?? this.address,
@@ -20,6 +46,10 @@ class StoreSettings {
       defaultReceiptDelivery: defaultReceiptDelivery ?? this.defaultReceiptDelivery,
       qrPaymentImagePath: qrPaymentImagePath ?? this.qrPaymentImagePath,
       lastBackupAt: lastBackupAt ?? this.lastBackupAt,
+      isTaxEnabled: isTaxEnabled ?? this.isTaxEnabled,
+      taxName: taxName ?? this.taxName,
+      taxRate: taxRate ?? this.taxRate,
+      isTaxInclusive: isTaxInclusive ?? this.isTaxInclusive,
     );
   }
 }
@@ -46,6 +76,10 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
     String? address;
     String? phone;
     String? defaultReceiptDelivery;
+    bool? isTaxEnabled;
+    String? taxName;
+    double? taxRate;
+    bool? isTaxInclusive;
 
     nameRes.match((_) {}, (val) => name = val);
     addressRes.match((_) {}, (val) => address = val);
@@ -62,6 +96,18 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
     DateTime? lastBackupAt;
     backupRes.match((_) {}, (val) => lastBackupAt = val);
 
+    final taxEnabledRes = await _repository.getSetting('is_tax_enabled');
+    taxEnabledRes.match((_) {}, (val) => isTaxEnabled = val == 'true');
+
+    final taxNameRes = await _repository.getSetting('tax_name');
+    taxNameRes.match((_) {}, (val) => taxName = val);
+
+    final taxRateRes = await _repository.getSetting('tax_rate');
+    taxRateRes.match((_) {}, (val) => taxRate = val != null ? double.tryParse(val) : null);
+
+    final taxInclusiveRes = await _repository.getSetting('is_tax_inclusive');
+    taxInclusiveRes.match((_) {}, (val) => isTaxInclusive = val == 'true');
+
     state = AsyncValue.data(StoreSettings(
       name: name,
       address: address,
@@ -69,6 +115,10 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
       defaultReceiptDelivery: defaultReceiptDelivery ?? 'ask',
       qrPaymentImagePath: qrPath,
       lastBackupAt: lastBackupAt,
+      isTaxEnabled: isTaxEnabled ?? false,
+      taxName: taxName ?? 'VAT',
+      taxRate: taxRate ?? 0.0,
+      isTaxInclusive: isTaxInclusive ?? false,
     ));
   }
 
@@ -77,8 +127,11 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
     required String address,
     required String phone,
     required String defaultReceiptDelivery,
+    bool? isTaxEnabled,
+    String? taxName,
+    double? taxRate,
+    bool? isTaxInclusive,
   }) async {
-    // Import authController at top if missing. We'll add it in the next chunk.
     final staffId = _ref.read(authStateProvider)?.id;
 
     final res1 = await _repository.setSetting('store_name', name, staffId: staffId);
@@ -86,7 +139,26 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
     final res3 = await _repository.setSetting('store_phone', phone, staffId: staffId);
     final res4 = await _repository.setSetting('default_receipt_delivery', defaultReceiptDelivery, staffId: staffId);
 
-    if (res1.isLeft() || res2.isLeft() || res3.isLeft() || res4.isLeft()) {
+    bool allSuccess = res1.isRight() && res2.isRight() && res3.isRight() && res4.isRight();
+
+    if (isTaxEnabled != null) {
+      final res5 = await _repository.setSetting('is_tax_enabled', isTaxEnabled.toString(), staffId: staffId);
+      allSuccess = allSuccess && res5.isRight();
+    }
+    if (taxName != null) {
+      final res6 = await _repository.setSetting('tax_name', taxName, staffId: staffId);
+      allSuccess = allSuccess && res6.isRight();
+    }
+    if (taxRate != null) {
+      final res7 = await _repository.setSetting('tax_rate', taxRate.toString(), staffId: staffId);
+      allSuccess = allSuccess && res7.isRight();
+    }
+    if (isTaxInclusive != null) {
+      final res8 = await _repository.setSetting('is_tax_inclusive', isTaxInclusive.toString(), staffId: staffId);
+      allSuccess = allSuccess && res8.isRight();
+    }
+
+    if (!allSuccess) {
       return 'Failed to save some settings';
     }
 
@@ -101,6 +173,10 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
       defaultReceiptDelivery: defaultReceiptDelivery,
       qrPaymentImagePath: qrPath,
       lastBackupAt: lastBackupAt,
+      isTaxEnabled: isTaxEnabled ?? state.valueOrNull?.isTaxEnabled,
+      taxName: taxName ?? state.valueOrNull?.taxName,
+      taxRate: taxRate ?? state.valueOrNull?.taxRate,
+      isTaxInclusive: isTaxInclusive ?? state.valueOrNull?.isTaxInclusive,
     ));
     return null; // success
   }
