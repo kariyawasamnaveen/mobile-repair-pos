@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pos_system/core/theme/app_theme.dart';
-import 'package:pos_system/core/navigation/home_shell.dart';
+import 'package:pos_system/features/auth/presentation/auth_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,7 +15,7 @@ void main() async {
   if (supabaseUrl != null && supabaseUrl.isNotEmpty && supabaseKey != null && supabaseKey.isNotEmpty) {
     await Supabase.initialize(
       url: supabaseUrl,
-      anonKey: supabaseKey,
+      publishableKey: supabaseKey,
     );
   }
   runApp(
@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
       title: 'POS System',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      home: const HomeShell(),
+      home: const AuthGate(),
     );
   }
 }

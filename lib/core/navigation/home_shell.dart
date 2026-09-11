@@ -8,6 +8,7 @@ import 'package:pos_system/features/settings/presentation/settings_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/core/backup/backup_service.dart';
 import 'package:pos_system/features/settings/data/settings_repository.dart';
+import 'package:pos_system/features/auth/presentation/auth_controller.dart';
 import 'dart:developer' as developer;
 
 class HomeShell extends ConsumerStatefulWidget {
@@ -49,28 +50,51 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     }
   }
 
-  static const _pages = [
-    CheckoutScreen(),
-    InventoryScreen(),
-    RepairJobListScreen(),
-    SalesAndLedgerScreen(),
-    SettingsScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authStateProvider);
+    if (user == null) return const Scaffold(body: Center(child: Text('Not logged in')));
+
+    final List<Widget> pages = [];
+    final List<NavigationDestination> destinations = [];
+
+    // Owner gets everything.
+    // Cashier gets Checkout, Inventory, Repairs, Sales.
+    // Technician gets only Repairs.
+
+    if (user.isOwner || user.isCashier) {
+      pages.add(const CheckoutScreen());
+      destinations.add(const NavigationDestination(icon: Icon(Icons.point_of_sale), label: 'Checkout'));
+      
+      pages.add(const InventoryScreen());
+      destinations.add(const NavigationDestination(icon: Icon(Icons.inventory_2), label: 'Inventory'));
+    }
+
+    if (user.isOwner || user.isCashier || user.isTechnician) {
+      pages.add(const RepairJobListScreen());
+      destinations.add(const NavigationDestination(icon: Icon(Icons.build), label: 'Repairs'));
+    }
+
+    if (user.isOwner || user.isCashier) {
+      pages.add(const SalesAndLedgerScreen());
+      destinations.add(const NavigationDestination(icon: Icon(Icons.receipt_long), label: 'Sales'));
+    }
+
+    // Everyone gets Settings (for Logout)
+    pages.add(const SettingsScreen());
+    destinations.add(const NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'));
+
+    // Ensure _selectedIndex is valid
+    if (_selectedIndex >= pages.length) {
+      _selectedIndex = 0;
+    }
+
     return Scaffold(
-      body: _pages[_selectedIndex],
+      body: pages[_selectedIndex],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (i) => setState(() => _selectedIndex = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.point_of_sale), label: 'Checkout'),
-          NavigationDestination(icon: Icon(Icons.inventory_2), label: 'Inventory'),
-          NavigationDestination(icon: Icon(Icons.build), label: 'Repairs'),
-          NavigationDestination(icon: Icon(Icons.receipt_long), label: 'Sales'),
-          NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
-        ],
+        destinations: destinations,
       ),
     );
   }

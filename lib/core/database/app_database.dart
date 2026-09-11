@@ -7,12 +7,12 @@ import 'package:pos_system/core/database/tables.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [AppSettings, Items, StockMovements, ItemImeis, Sales, SaleItems, RepairJobs, RepairStatusHistory, RepairJobParts, CreditPayments])
+@DriftDatabase(tables: [AppSettings, Items, StockMovements, ItemImeis, Sales, SaleItems, RepairJobs, RepairStatusHistory, RepairJobParts, CreditPayments, StaffMembers, ActivityLogs])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration {
@@ -62,6 +62,19 @@ class AppDatabase extends _$AppDatabase {
           await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_repair_jobs_status ON repair_jobs(status);');
           await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_repair_jobs_created_at ON repair_jobs(created_at);');
           await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_credit_payments_customer_phone ON credit_payments(customer_phone);');
+        }
+        if (from < 8) {
+          final existingTablesResult = await m.database.customSelect("SELECT name FROM sqlite_master WHERE type='table'").get();
+          final existingTables = existingTablesResult.map((row) => row.read<String>('name')).toSet();
+          
+          if (!existingTables.contains('staff_members')) {
+            await m.createTable(staffMembers);
+          }
+          if (!existingTables.contains('activity_logs')) {
+            await m.createTable(activityLogs);
+            await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_activity_logs_staff_id ON activity_logs(staff_id);');
+            await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_activity_logs_timestamp ON activity_logs(timestamp);');
+          }
         }
       },
       beforeOpen: (details) async {

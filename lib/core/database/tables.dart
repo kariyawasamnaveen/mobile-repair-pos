@@ -1,3 +1,4 @@
+// ignore_for_file: constant_identifier_names
 import 'package:drift/drift.dart';
 
 enum ItemCategory { phone, accessory, sparePart, other }
@@ -5,6 +6,8 @@ enum MovementReason { sale, restock, adjustment, returnItem, repairUsage }
 enum PaymentMethod { cash, card, credit, qr }
 enum RepairJobStatus { received, diagnosing, awaitingCustomerApproval, inProgress, readyForPickup, delivered, cancelled }
 enum CreditPaymentMethod { cash, card, qr }
+enum StaffRole { owner, cashier, technician }
+enum ActivityActionType { sale_created, item_price_changed, stock_adjusted, repair_status_changed, payment_collected, settings_changed, staff_login }
 
 @DataClassName('SettingItem')
 class AppSettings extends Table {
@@ -143,4 +146,27 @@ class CreditPayments extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('StaffMemberEntity')
+class StaffMembers extends Table {
+  TextColumn get id => text()(); // UUID v4
+  TextColumn get name => text()();
+  TextColumn get pinHash => text()();
+  TextColumn get salt => text()();
+  TextColumn get role => textEnum<StaffRole>()();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('ActivityLogEntity')
+class ActivityLogs extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get staffId => text().nullable().references(StaffMembers, #id)();
+  TextColumn get actionType => textEnum<ActivityActionType>()();
+  TextColumn get description => text()();
+  DateTimeColumn get timestamp => dateTime().withDefault(currentDateAndTime)();
 }
