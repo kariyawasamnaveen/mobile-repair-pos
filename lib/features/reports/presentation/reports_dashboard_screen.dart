@@ -4,6 +4,7 @@ import 'package:pos_system/features/reports/domain/reports_models.dart';
 import 'package:pos_system/features/reports/presentation/reports_controller.dart';
 import 'package:pos_system/features/reports/domain/pdf_report_generator.dart';
 import 'package:printing/printing.dart';
+import 'package:pos_system/core/theme/app_theme.dart';
 
 class ReportsDashboardScreen extends ConsumerStatefulWidget {
   const ReportsDashboardScreen({super.key});
@@ -16,6 +17,7 @@ class _ReportsDashboardScreenState extends ConsumerState<ReportsDashboardScreen>
   @override
   Widget build(BuildContext context) {
     final dateRangeType = ref.watch(dateRangeTypeProvider);
+    final theme = Theme.of(context);
 
     return DefaultTabController(
       length: 4,
@@ -24,7 +26,7 @@ class _ReportsDashboardScreenState extends ConsumerState<ReportsDashboardScreen>
           title: const Text('Reports'),
           actions: [
             IconButton(
-              icon: const Icon(Icons.picture_as_pdf),
+              icon: const Icon(Icons.picture_as_pdf_outlined),
               tooltip: 'Generate Monthly Report',
               onPressed: () async {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Generating PDF Report...')));
@@ -42,35 +44,44 @@ class _ReportsDashboardScreenState extends ConsumerState<ReportsDashboardScreen>
                 }
               },
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: DropdownButton<DateRangeType>(
-                value: dateRangeType,
-                underline: const SizedBox(),
-                icon: const Icon(Icons.calendar_today, size: 16),
-                items: const [
-                  DropdownMenuItem(value: DateRangeType.today, child: Text('Today')),
-                  DropdownMenuItem(value: DateRangeType.thisWeek, child: Text('This Week')),
-                  DropdownMenuItem(value: DateRangeType.thisMonth, child: Text('This Month')),
-                  DropdownMenuItem(value: DateRangeType.custom, child: Text('Custom')),
-                ],
-                onChanged: (val) async {
-                  if (val == DateRangeType.custom) {
-                    final picked = await showDateRangePicker(
-                      context: context,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now(),
-                    );
-                    if (picked != null) {
-                      ref.read(customDateRangeProvider.notifier).state = DateRange(picked.start, picked.end.add(const Duration(days: 1, milliseconds: -1)));
-                      ref.read(dateRangeTypeProvider.notifier).state = DateRangeType.custom;
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing8, vertical: AppThemeConstants.spacing8),
+              padding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(AppThemeConstants.radiusInput),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<DateRangeType>(
+                  value: dateRangeType,
+                  icon: Icon(Icons.calendar_today_outlined, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                  dropdownColor: theme.colorScheme.surfaceContainerHighest,
+                  style: theme.textTheme.bodyMedium,
+                  items: const [
+                    DropdownMenuItem(value: DateRangeType.today, child: Text('Today')),
+                    DropdownMenuItem(value: DateRangeType.thisWeek, child: Text('This Week')),
+                    DropdownMenuItem(value: DateRangeType.thisMonth, child: Text('This Month')),
+                    DropdownMenuItem(value: DateRangeType.custom, child: Text('Custom')),
+                  ],
+                  onChanged: (val) async {
+                    if (val == DateRangeType.custom) {
+                      final picked = await showDateRangePicker(
+                        context: context,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) {
+                        ref.read(customDateRangeProvider.notifier).state = DateRange(picked.start, picked.end.add(const Duration(days: 1, milliseconds: -1)));
+                        ref.read(dateRangeTypeProvider.notifier).state = DateRangeType.custom;
+                      }
+                    } else if (val != null) {
+                      ref.read(dateRangeTypeProvider.notifier).state = val;
                     }
-                  } else if (val != null) {
-                    ref.read(dateRangeTypeProvider.notifier).state = val;
-                  }
-                },
+                  },
+                ),
               ),
             ),
+            const SizedBox(width: AppThemeConstants.spacing8),
           ],
           bottom: const TabBar(
             isScrollable: true,
@@ -103,47 +114,48 @@ class _SummaryTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(dashboardSummaryProvider);
+    final theme = Theme.of(context);
     
     return state.when(
       data: (summary) {
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: AppThemeConstants.defaultPadding,
           children: [
             _SummaryCard(
               title: 'Total Sales Revenue',
               value: 'LKR ${summary.totalSalesRevenue.toStringAsFixed(2)}',
               icon: Icons.attach_money,
-              color: Colors.green,
+              color: AppTheme.successColor,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppThemeConstants.spacing8),
             _SummaryCard(
               title: 'Total Transactions',
               value: summary.totalTransactions.toString(),
-              icon: Icons.receipt,
-              color: Colors.blue,
+              icon: Icons.receipt_long_outlined,
+              color: theme.colorScheme.primary,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppThemeConstants.spacing8),
             _SummaryCard(
               title: 'Repair Jobs Revenue',
               value: 'LKR ${summary.totalRepairRevenue.toStringAsFixed(2)}',
-              icon: Icons.build,
-              color: Colors.orange,
+              icon: Icons.build_circle_outlined,
+              color: AppTheme.warningColor,
             ),
-            const SizedBox(height: 24),
-            const Text('Snapshots (Current)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppThemeConstants.spacing24),
+            Text('Snapshots (Current)', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant)),
+            const SizedBox(height: AppThemeConstants.spacing8),
             _SummaryCard(
               title: 'Outstanding Credit',
               value: 'LKR ${summary.outstandingCredit.toStringAsFixed(2)}',
-              icon: Icons.account_balance_wallet,
-              color: Colors.red,
+              icon: Icons.account_balance_wallet_outlined,
+              color: AppTheme.errorColor,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppThemeConstants.spacing8),
             _SummaryCard(
               title: 'Low Stock Items',
               value: summary.lowStockItemsCount.toString(),
               icon: Icons.warning_amber_rounded,
-              color: Colors.amber,
+              color: AppTheme.warningColor,
             ),
           ],
         );
@@ -164,15 +176,19 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
-      elevation: 2,
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing16, vertical: AppThemeConstants.spacing8),
         leading: CircleAvatar(
           backgroundColor: color.withValues(alpha: 0.2),
           child: Icon(icon, color: color),
         ),
-        title: Text(title, style: const TextStyle(fontSize: 14)),
-        subtitle: Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(title, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: AppThemeConstants.spacing4),
+          child: Text(value, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+        ),
       ),
     );
   }
@@ -186,34 +202,51 @@ class _SalesBreakdownTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(salesBreakdownProvider);
+    final theme = Theme.of(context);
     
     return state.when(
       data: (data) {
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: AppThemeConstants.defaultPadding,
           children: [
             const _SectionHeader('Revenue by Payment Method'),
-            ...data.revenueByMethod.entries.map((e) => ListTile(
-              title: Text(e.key.toUpperCase()),
-              trailing: Text('LKR ${e.value.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            ...data.revenueByMethod.entries.map((e) => Card(
+              margin: const EdgeInsets.only(bottom: AppThemeConstants.spacing8),
+              child: ListTile(
+                title: Text(e.key.toUpperCase(), style: theme.textTheme.titleMedium),
+                trailing: Text('LKR ${e.value.toStringAsFixed(2)}', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              ),
             )),
-            if (data.revenueByMethod.isEmpty) const Text('No sales found.'),
+            if (data.revenueByMethod.isEmpty) Padding(padding: const EdgeInsets.only(bottom: AppThemeConstants.spacing16), child: Text('No sales found.', style: theme.textTheme.bodyMedium)),
             
-            const SizedBox(height: 24),
+            const SizedBox(height: AppThemeConstants.spacing16),
             const _SectionHeader('Top 5 Items (by Quantity)'),
-            ...data.topSellingByQuantity.map((e) => ListTile(
-              title: Text(e.itemName),
-              trailing: Text('${e.totalQuantity} sold'),
+            ...data.topSellingByQuantity.map((e) => Card(
+              margin: const EdgeInsets.only(bottom: AppThemeConstants.spacing8),
+              child: ListTile(
+                title: Text(e.itemName, style: theme.textTheme.titleMedium),
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text('${e.totalQuantity} sold', style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                ),
+              ),
             )),
-            if (data.topSellingByQuantity.isEmpty) const Text('No items sold.'),
+            if (data.topSellingByQuantity.isEmpty) Padding(padding: const EdgeInsets.only(bottom: AppThemeConstants.spacing16), child: Text('No items sold.', style: theme.textTheme.bodyMedium)),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: AppThemeConstants.spacing16),
             const _SectionHeader('Top 5 Items (by Revenue)'),
-            ...data.topSellingByRevenue.map((e) => ListTile(
-              title: Text(e.itemName),
-              trailing: Text('LKR ${e.totalRevenue.toStringAsFixed(2)}'),
+            ...data.topSellingByRevenue.map((e) => Card(
+              margin: const EdgeInsets.only(bottom: AppThemeConstants.spacing8),
+              child: ListTile(
+                title: Text(e.itemName, style: theme.textTheme.titleMedium),
+                trailing: Text('LKR ${e.totalRevenue.toStringAsFixed(2)}', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+              ),
             )),
-            if (data.topSellingByRevenue.isEmpty) const Text('No items sold.'),
+            if (data.topSellingByRevenue.isEmpty) Padding(padding: const EdgeInsets.only(bottom: AppThemeConstants.spacing16), child: Text('No items sold.', style: theme.textTheme.bodyMedium)),
           ],
         );
       },
@@ -231,6 +264,7 @@ class _RepairsBreakdownTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(repairJobsBreakdownProvider);
+    final theme = Theme.of(context);
     
     return state.when(
       data: (data) {
@@ -242,22 +276,35 @@ class _RepairsBreakdownTab extends ConsumerWidget {
         }
 
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: AppThemeConstants.defaultPadding,
           children: [
             const _SectionHeader('Average Turnaround Time'),
-            ListTile(
-              leading: const Icon(Icons.timer),
-              title: const Text('For delivered jobs'),
-              trailing: Text(avgTimeStr, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Card(
+              margin: const EdgeInsets.only(bottom: AppThemeConstants.spacing16),
+              child: ListTile(
+                leading: Icon(Icons.timer_outlined, color: theme.colorScheme.primary),
+                title: Text('For delivered jobs', style: theme.textTheme.titleMedium),
+                trailing: Text(avgTimeStr, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              ),
             ),
             
-            const SizedBox(height: 24),
+            const SizedBox(height: AppThemeConstants.spacing8),
             const _SectionHeader('Jobs by Status'),
-            ...data.jobsByStatus.entries.map((e) => ListTile(
-              title: Text(e.key.toUpperCase()),
-              trailing: Text(e.value.toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
+            ...data.jobsByStatus.entries.map((e) => Card(
+              margin: const EdgeInsets.only(bottom: AppThemeConstants.spacing8),
+              child: ListTile(
+                title: Text(e.key.toUpperCase(), style: theme.textTheme.titleMedium),
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(e.value.toString(), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimaryContainer)),
+                ),
+              ),
             )),
-            if (data.jobsByStatus.isEmpty) const Text('No repair jobs found.'),
+            if (data.jobsByStatus.isEmpty) Padding(padding: const EdgeInsets.only(bottom: AppThemeConstants.spacing16), child: Text('No repair jobs found.', style: theme.textTheme.bodyMedium)),
           ],
         );
       },
@@ -276,46 +323,48 @@ class _InventoryHealthTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(inventoryHealthProvider);
     final summaryState = ref.watch(dashboardSummaryProvider);
+    final theme = Theme.of(context);
     
     return state.when(
       data: (data) {
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: AppThemeConstants.defaultPadding,
           children: [
             const _SectionHeader('Total Inventory Value'),
             Card(
-              color: Theme.of(context).colorScheme.primaryContainer,
+              color: theme.colorScheme.primaryContainer,
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppThemeConstants.spacing24),
                 child: Center(
                   child: Text(
                     'LKR ${data.totalValue.toStringAsFixed(2)}',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                    style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onPrimaryContainer),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppThemeConstants.spacing24),
             
             const _SectionHeader('Low Stock Alerts'),
             summaryState.maybeWhen(
               data: (summary) {
                 if (summary.lowStockItemsCount == 0) {
-                  return const ListTile(
-                    leading: Icon(Icons.check_circle, color: Colors.green),
-                    title: Text('Inventory is healthy'),
+                  return Card(
+                    child: ListTile(
+                      leading: Icon(Icons.check_circle_outline, color: AppTheme.successColor),
+                      title: Text('Inventory is healthy', style: theme.textTheme.titleMedium),
+                    ),
                   );
                 }
-                return ListTile(
-                  leading: const Icon(Icons.warning, color: Colors.amber),
-                  title: Text('${summary.lowStockItemsCount} items are low on stock'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    // Navigate to inventory tab if they want to manage it, or just show a message.
-                    // The simplest is to just switch tabs on HomeShell, but HomeShell manages it.
-                    // Easiest is to pop and tell user to go to inventory.
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please check the Inventory tab for low stock items.')));
-                  },
+                return Card(
+                  child: ListTile(
+                    leading: Icon(Icons.warning_amber_rounded, color: AppTheme.warningColor),
+                    title: Text('${summary.lowStockItemsCount} items are low on stock', style: theme.textTheme.titleMedium),
+                    trailing: Icon(Icons.chevron_right, size: 24, color: theme.colorScheme.onSurfaceVariant),
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please check the Inventory tab for low stock items.')));
+                    },
+                  ),
                 );
               },
               orElse: () => const SizedBox(),
@@ -335,11 +384,12 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AppThemeConstants.spacing12),
       child: Text(
         title,
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
+        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
       ),
     );
   }

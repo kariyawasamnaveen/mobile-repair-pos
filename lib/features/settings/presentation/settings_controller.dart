@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/features/settings/data/settings_repository.dart';
+import 'package:pos_system/features/auth/presentation/auth_controller.dart';
 
 class StoreSettings {
   final String? name;
@@ -24,13 +25,14 @@ class StoreSettings {
 }
 
 final storeSettingsProvider = StateNotifierProvider<StoreSettingsNotifier, AsyncValue<StoreSettings>>((ref) {
-  return StoreSettingsNotifier(ref.watch(settingsRepositoryProvider));
+  return StoreSettingsNotifier(ref.watch(settingsRepositoryProvider), ref);
 });
 
 class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
   final SettingsRepository _repository;
+  final Ref _ref;
 
-  StoreSettingsNotifier(this._repository) : super(const AsyncValue.loading()) {
+  StoreSettingsNotifier(this._repository, this._ref) : super(const AsyncValue.loading()) {
     loadStoreSettings();
   }
 
@@ -76,10 +78,13 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
     required String phone,
     required String defaultReceiptDelivery,
   }) async {
-    final res1 = await _repository.setSetting('store_name', name);
-    final res2 = await _repository.setSetting('store_address', address);
-    final res3 = await _repository.setSetting('store_phone', phone);
-    final res4 = await _repository.setSetting('default_receipt_delivery', defaultReceiptDelivery);
+    // Import authController at top if missing. We'll add it in the next chunk.
+    final staffId = _ref.read(authStateProvider)?.id;
+
+    final res1 = await _repository.setSetting('store_name', name, staffId: staffId);
+    final res2 = await _repository.setSetting('store_address', address, staffId: staffId);
+    final res3 = await _repository.setSetting('store_phone', phone, staffId: staffId);
+    final res4 = await _repository.setSetting('default_receipt_delivery', defaultReceiptDelivery, staffId: staffId);
 
     if (res1.isLeft() || res2.isLeft() || res3.isLeft() || res4.isLeft()) {
       return 'Failed to save some settings';
@@ -101,10 +106,11 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
   }
 
   Future<void> updateQrImagePath(String? path) async {
+    final staffId = _ref.read(authStateProvider)?.id;
     if (path == null) {
-      await _repository.setSetting('qr_payment_image_path', '');
+      await _repository.setSetting('qr_payment_image_path', '', staffId: staffId);
     } else {
-      await _repository.setSetting('qr_payment_image_path', path);
+      await _repository.setSetting('qr_payment_image_path', path, staffId: staffId);
     }
     
     if (state.hasValue && state.value != null) {

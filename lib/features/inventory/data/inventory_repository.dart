@@ -8,16 +8,21 @@ import 'package:pos_system/core/error/failure.dart';
 import 'package:pos_system/features/inventory/domain/item.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/providers/app_providers.dart';
+import 'package:pos_system/features/auth/data/activity_log_repository.dart';
 
 final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) {
-  return InventoryRepository(ref.watch(databaseProvider));
+  return InventoryRepository(
+    ref.watch(databaseProvider),
+    ref.watch(activityLogRepositoryProvider),
+  );
 });
 
 class InventoryRepository {
   final AppDatabase _db;
+  final ActivityLogRepository _activityLogRepo;
   final _uuid = const Uuid();
 
-  InventoryRepository(this._db);
+  InventoryRepository(this._db, this._activityLogRepo);
 
   Future<Either<Failure, String>> _generateInternalCode() async {
     try {
@@ -106,7 +111,7 @@ class InventoryRepository {
     }
   }
 
-  Future<Either<Failure, Item>> addItem(Item item, {MovementReason reason = MovementReason.restock}) async {
+  Future<Either<Failure, Item>> addItem(Item item, {MovementReason reason = MovementReason.restock, String? staffId}) async {
     try {
       String internalCode = item.internalCode;
       if (internalCode.isEmpty) {
@@ -156,6 +161,12 @@ class InventoryRepository {
         }
       });
 
+      await _activityLogRepo.logAction(
+        staffId: staffId,
+        actionType: ActivityActionType.stock_adjusted,
+        description: 'Added new item: ${item.name} ($internalCode)',
+      );
+
       return Right(Item(
         id: itemId,
         name: item.name,
@@ -177,7 +188,8 @@ class InventoryRepository {
       String itemId, int changeAmount, MovementReason reason,
       {bool allowNegative = false,
       List<String> imeisToAdd = const [],
-      List<String> imeisToRemove = const []}) async {
+      List<String> imeisToRemove = const [],
+      String? staffId}) async {
     try {
       await _db.transaction(() async {
         final itemRow = await (_db.select(_db.items)..where((t) => t.id.equals(itemId))).getSingleOrNull();
@@ -216,6 +228,15 @@ class InventoryRepository {
               .write(const ItemImeisCompanion(isSold: Value(true)));
         }
       });
+
+      if (changeAmount != 0) {
+        await _activityLogRepo.logAction(
+          staffId: staffId,
+          actionType: ActivityActionType.stock_adjusted,
+          description: 'Adjusted stock for item $itemId by $changeAmount (Reason: ${reason.name})',
+        );
+      }
+
       return const Right(unit);
     } catch (e, st) {
       return Left(Failure('Failed to adjust stock', error: e, stackTrace: st));

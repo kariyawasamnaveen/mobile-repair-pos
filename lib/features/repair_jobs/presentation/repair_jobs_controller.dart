@@ -4,9 +4,10 @@ import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/core/error/failure.dart';
 import 'package:pos_system/features/repair_jobs/data/repair_jobs_repository.dart';
 import 'package:pos_system/features/repair_jobs/domain/repair_job.dart';
+import 'package:pos_system/features/auth/presentation/auth_controller.dart';
 import 'package:pos_system/features/inventory/presentation/inventory_controller.dart';
 
-final repairJobsListProvider = FutureProvider.autoDispose<List<RepairJob>>((ref) async {
+final repairJobsListProvider = FutureProvider<List<RepairJob>>((ref) async {
   final repo = ref.watch(repairJobsRepositoryProvider);
   final result = await repo.getRepairJobs();
   return result.getOrElse((l) => throw l.message);
@@ -37,6 +38,7 @@ class RepairJobsController {
     required String deviceConditionNotes,
     double? estimatedCost,
   }) async {
+    final staffId = _ref.read(authStateProvider)?.id;
     final res = await _repository.createRepairJob(
       customerName: customerName,
       customerPhone: customerPhone,
@@ -45,6 +47,7 @@ class RepairJobsController {
       reportedIssue: reportedIssue,
       deviceConditionNotes: deviceConditionNotes,
       estimatedCost: estimatedCost,
+      staffId: staffId,
     );
     if (res.isRight()) {
       _ref.invalidate(repairJobsListProvider);
@@ -57,10 +60,12 @@ class RepairJobsController {
     required RepairJobStatus status,
     String? note,
   }) async {
+    final staffId = _ref.read(authStateProvider)?.id;
     final res = await _repository.updateRepairJob(
       id: id,
       newStatus: status,
       statusNote: note,
+      staffId: staffId,
     );
     if (res.isRight()) {
       _ref.invalidate(repairJobsListProvider);
@@ -73,9 +78,11 @@ class RepairJobsController {
     required String id,
     required String name,
   }) async {
+    final staffId = _ref.read(authStateProvider)?.id;
     final res = await _repository.updateRepairJob(
       id: id,
       assignedTechnicianName: name,
+      staffId: staffId,
     );
     if (res.isRight()) {
       _ref.invalidate(repairJobsListProvider);
@@ -88,9 +95,11 @@ class RepairJobsController {
     required String id,
     required double cost,
   }) async {
+    final staffId = _ref.read(authStateProvider)?.id;
     final res = await _repository.updateRepairJob(
       id: id,
       finalCost: cost,
+      staffId: staffId,
     );
     if (res.isRight()) {
       _ref.invalidate(repairJobsListProvider);

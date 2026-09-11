@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/features/billing/presentation/billing_controller.dart';
 import 'package:pos_system/features/billing/presentation/receipt_screen.dart';
 import 'package:pos_system/features/credit_ledger/presentation/customer_ledger_screen.dart';
+import 'package:pos_system/core/theme/app_theme.dart';
 
 /// Combined Sales & Ledger tab — two sub-tabs so the nav bar stays at 5 items.
 class SalesAndLedgerScreen extends StatelessWidget {
@@ -17,8 +18,8 @@ class SalesAndLedgerScreen extends StatelessWidget {
           title: const Text('Sales'),
           bottom: const TabBar(
             tabs: [
-              Tab(icon: Icon(Icons.receipt_long), text: 'History'),
-              Tab(icon: Icon(Icons.account_balance_wallet), text: 'Naya Potha'),
+              Tab(icon: Icon(Icons.receipt_long_outlined), text: 'History'),
+              Tab(icon: Icon(Icons.account_balance_wallet_outlined), text: 'Naya Potha'),
             ],
           ),
         ),
@@ -41,45 +42,88 @@ class _SalesHistoryTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final salesState = ref.watch(salesHistoryProvider);
+    final theme = Theme.of(context);
 
     return salesState.when(
       data: (sales) {
         if (sales.isEmpty) {
-          return const Center(child: Text('No sales found.'));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.receipt_outlined, size: 64, color: theme.colorScheme.onSurfaceVariant),
+                const SizedBox(height: AppThemeConstants.spacing16),
+                Text('No sales found.', style: theme.textTheme.titleMedium),
+              ],
+            ),
+          );
         }
         return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing16, vertical: AppThemeConstants.spacing8),
           itemCount: sales.length,
           itemBuilder: (context, index) {
             final sale = sales[index];
             final hasOutstandingBalance =
                 sale.isCreditSale && sale.balanceDue > 0;
-            return ListTile(
-              title: Text(
-                  'Sale: ${sale.id.substring(0, 8).toUpperCase()} · LKR ${sale.total}'),
-              subtitle: Text(
-                '${sale.createdAt.toString().split('.')[0]} | '
-                '${sale.paymentMethod.name.toUpperCase()}'
-                '${hasOutstandingBalance ? ' · Due: LKR ${sale.balanceDue.toStringAsFixed(2)}' : ''}',
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (hasOutstandingBalance)
-                    Tooltip(
-                      message: 'Outstanding balance: LKR ${sale.balanceDue.toStringAsFixed(2)}',
-                      child: Icon(
-                        Icons.warning_amber_rounded,
-                        color: Theme.of(context).colorScheme.error,
-                        size: 20,
+            return Card(
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing16, vertical: AppThemeConstants.spacing8),
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Sale: ${sale.id.substring(0, 8).toUpperCase()}',
+                        style: theme.textTheme.titleMedium,
                       ),
                     ),
-                  const Icon(Icons.receipt),
-                ],
-              ),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute<void>(
-                  builder: (_) => ReceiptScreen(sale: sale),
+                    Text(
+                      'LKR ${sale.total}',
+                      style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: AppThemeConstants.spacing4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${sale.createdAt.toString().split('.')[0]} | ${sale.paymentMethod.name.toUpperCase()}',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                      if (hasOutstandingBalance)
+                        Padding(
+                          padding: const EdgeInsets.only(top: AppThemeConstants.spacing4),
+                          child: Text(
+                            'Due: LKR ${sale.balanceDue.toStringAsFixed(2)}',
+                            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (hasOutstandingBalance)
+                      Tooltip(
+                        message: 'Outstanding balance: LKR ${sale.balanceDue.toStringAsFixed(2)}',
+                        child: Icon(
+                          Icons.warning_amber_rounded,
+                          color: theme.colorScheme.error,
+                          size: 20,
+                        ),
+                      ),
+                    const SizedBox(width: AppThemeConstants.spacing8),
+                    Icon(Icons.chevron_right, color: theme.colorScheme.onSurfaceVariant),
+                  ],
+                ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => ReceiptScreen(sale: sale),
+                  ),
                 ),
               ),
             );

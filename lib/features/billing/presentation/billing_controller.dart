@@ -6,6 +6,7 @@ import 'package:pos_system/features/billing/domain/cart_item.dart';
 import 'package:pos_system/features/billing/domain/sale.dart';
 import 'package:pos_system/features/inventory/domain/item.dart';
 import 'package:pos_system/features/inventory/presentation/inventory_controller.dart';
+import 'package:pos_system/features/auth/presentation/auth_controller.dart';
 
 final cartProvider = StateNotifierProvider<CartNotifier, List<CartItem>>((ref) {
   return CartNotifier();
@@ -162,6 +163,7 @@ class CheckoutController {
       amountTendered: paymentMethod == PaymentMethod.cash ? amountTendered : null,
       changeDue: changeDue,
       cashierName: cashierName,
+      staffId: _ref.read(authStateProvider)?.id,
     );
 
     return result.match(

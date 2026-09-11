@@ -4,6 +4,7 @@ import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/features/repair_jobs/presentation/repair_jobs_controller.dart';
 import 'package:pos_system/features/repair_jobs/presentation/new_repair_job_screen.dart';
 import 'package:pos_system/features/repair_jobs/presentation/repair_job_detail_screen.dart';
+import 'package:pos_system/core/theme/app_theme.dart';
 
 class RepairJobListScreen extends ConsumerStatefulWidget {
   const RepairJobListScreen({super.key});
@@ -18,25 +19,35 @@ class _RepairJobListScreenState extends ConsumerState<RepairJobListScreen> {
   @override
   Widget build(BuildContext context) {
     final jobsAsync = ref.watch(repairJobsListProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Repair Jobs'),
         actions: [
-          DropdownButton<String>(
-            value: _filter,
-            icon: const Icon(Icons.filter_list, color: Colors.white),
-            dropdownColor: Colors.blueGrey,
-            style: const TextStyle(color: Colors.white),
-            underline: const SizedBox(),
-            items: ['All', 'In Progress', 'Ready', 'Delivered']
-                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                .toList(),
-            onChanged: (val) {
-              if (val != null) setState(() => _filter = val);
-            },
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing8, vertical: AppThemeConstants.spacing8),
+            padding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(AppThemeConstants.radiusInput),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _filter,
+                icon: Icon(Icons.filter_list, color: theme.colorScheme.onSurfaceVariant),
+                dropdownColor: theme.colorScheme.surfaceContainerHighest,
+                style: theme.textTheme.bodyMedium,
+                items: ['All', 'In Progress', 'Ready', 'Delivered']
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => _filter = val);
+                },
+              ),
+            ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: AppThemeConstants.spacing8),
         ],
       ),
       body: jobsAsync.when(
@@ -50,22 +61,62 @@ class _RepairJobListScreenState extends ConsumerState<RepairJobListScreen> {
           }).toList();
 
           if (filteredJobs.isEmpty) {
-            return const Center(child: Text('No repair jobs found.'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.build_circle_outlined, size: 64, color: theme.colorScheme.onSurfaceVariant),
+                  const SizedBox(height: AppThemeConstants.spacing16),
+                  Text('No repair jobs found.', style: theme.textTheme.titleMedium),
+                ],
+              ),
+            );
           }
 
           return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing16, vertical: AppThemeConstants.spacing8),
             itemCount: filteredJobs.length,
             itemBuilder: (context, index) {
               final job = filteredJobs[index];
               final days = DateTime.now().difference(job.createdAt).inDays;
               
-              return ListTile(
-                title: Text('${job.jobNumber} - ${job.customerName}'),
-                subtitle: Text('${job.deviceModel ?? 'Unknown Device'} • ${job.status.name} • ${days}d ago'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => RepairJobDetailScreen(jobId: job.id)));
-                },
+              Color statusColor = theme.colorScheme.primary;
+              if (job.status == RepairJobStatus.delivered) statusColor = AppTheme.successColor;
+              if (job.status == RepairJobStatus.awaitingCustomerApproval) statusColor = AppTheme.warningColor;
+              if (job.status == RepairJobStatus.cancelled) statusColor = AppTheme.errorColor;
+
+              return Card(
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing16, vertical: AppThemeConstants.spacing8),
+                  title: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text('${job.jobNumber} - ${job.customerName}', style: theme.textTheme.titleMedium),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: statusColor.withValues(alpha: 0.5)),
+                        ),
+                        child: Text(
+                          job.status.name,
+                          style: theme.textTheme.labelSmall?.copyWith(color: statusColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: AppThemeConstants.spacing4),
+                    child: Text('${job.deviceModel ?? 'Unknown Device'} • ${days}d ago', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  ),
+                  trailing: Icon(Icons.chevron_right, color: theme.colorScheme.onSurfaceVariant),
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => RepairJobDetailScreen(jobId: job.id)));
+                  },
+                ),
               );
             },
           );

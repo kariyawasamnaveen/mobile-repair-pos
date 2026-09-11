@@ -7,6 +7,7 @@ import 'package:pos_system/features/billing/presentation/billing_controller.dart
 import 'package:pos_system/features/inventory/domain/item.dart';
 import 'package:pos_system/features/inventory/presentation/inventory_controller.dart';
 import 'package:pos_system/features/billing/presentation/payment_screen.dart';
+import 'package:pos_system/core/theme/app_theme.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -87,6 +88,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final isCartEmpty = ref.watch(cartProvider.select((cart) => cart.isEmpty));
     final totalItems = ref.watch(cartProvider.select((cart) => cart.fold<int>(0, (sum, item) => sum + item.quantity)));
     final inventoryState = ref.watch(inventoryControllerProvider);
+    final theme = Theme.of(context);
 
     return KeyboardListener(
       focusNode: _focusNode,
@@ -99,7 +101,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               alignment: Alignment.center,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.shopping_cart),
+                  icon: const Icon(Icons.shopping_cart_outlined),
                   onPressed: () {
                     if (isCartEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cart is empty'), duration: Duration(seconds: 1)));
@@ -115,7 +117,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(2),
                       decoration: BoxDecoration(
-                        color: Colors.red,
+                        color: theme.colorScheme.error,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       constraints: const BoxConstraints(
@@ -124,20 +126,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ),
                       child: Text(
                         '$totalItems',
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: theme.colorScheme.onError, fontSize: 10, fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
                     ),
                   ),
               ],
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppThemeConstants.spacing8),
           ],
         ),
         body: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: AppThemeConstants.defaultPadding,
               child: Row(
                 children: [
                   Expanded(
@@ -146,21 +148,26 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Search / Scan Items',
                         prefixIcon: Icon(Icons.search),
-                        border: OutlineInputBorder(),
                       ),
                       onChanged: (val) {
                         ref.read(inventoryControllerProvider.notifier).setSearchQuery(val);
                       },
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    tooltip: 'Scan barcode with camera',
-                    icon: const Icon(Icons.qr_code_scanner, size: 28),
-                    onPressed: () async {
-                      final result = await showCameraScannerSheet(context);
-                      if (result != null) _handleScan(result);
-                    },
+                  const SizedBox(width: AppThemeConstants.spacing8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.secondaryContainer,
+                      borderRadius: BorderRadius.circular(AppThemeConstants.radiusInput),
+                    ),
+                    child: IconButton(
+                      tooltip: 'Scan barcode with camera',
+                      icon: Icon(Icons.qr_code_scanner, size: 28, color: theme.colorScheme.onSecondaryContainer),
+                      onPressed: () async {
+                        final result = await showCameraScannerSheet(context);
+                        if (result != null) _handleScan(result);
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -168,17 +175,64 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             Expanded(
               child: inventoryState.when(
                 data: (items) {
+                  if (items.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.inventory_2_outlined, size: 64, color: theme.colorScheme.onSurfaceVariant),
+                          const SizedBox(height: AppThemeConstants.spacing16),
+                          Text('No items found.', style: theme.textTheme.titleMedium),
+                        ],
+                      ),
+                    );
+                  }
                   return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing16),
                     itemCount: items.length,
                     itemBuilder: (context, index) {
                       final item = items[index];
                       final outOfStock = item.quantity <= 0;
-                      return ListTile(
-                        title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w500)),
-                        subtitle: Text('LKR ${item.sellingPrice} | Stock: ${item.quantity}'),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.add_shopping_cart),
-                          onPressed: outOfStock ? null : () {
+                      return Card(
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing16, vertical: AppThemeConstants.spacing8),
+                          title: Text(item.name, style: theme.textTheme.titleMedium?.copyWith(
+                            color: outOfStock ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.onSurface,
+                          )),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: AppThemeConstants.spacing4),
+                            child: Row(
+                              children: [
+                                Text('LKR ${item.sellingPrice}', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                                const SizedBox(width: AppThemeConstants.spacing12),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: outOfStock ? theme.colorScheme.errorContainer : theme.colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'Stock: ${item.quantity}',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: outOfStock ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          trailing: IconButton(
+                            icon: Icon(Icons.add_shopping_cart, color: outOfStock ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.primary),
+                            onPressed: outOfStock ? null : () {
+                              if (item.category == ItemCategory.phone) {
+                                _showImeiSelection(context, item);
+                              } else {
+                                ref.read(cartProvider.notifier).addItem(item);
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Added to cart'), duration: Duration(seconds: 1)));
+                              }
+                            },
+                          ),
+                          onTap: outOfStock ? null : () {
                             if (item.category == ItemCategory.phone) {
                               _showImeiSelection(context, item);
                             } else {
@@ -187,14 +241,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             }
                           },
                         ),
-                        onTap: outOfStock ? null : () {
-                          if (item.category == ItemCategory.phone) {
-                            _showImeiSelection(context, item);
-                          } else {
-                            ref.read(cartProvider.notifier).addItem(item);
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Added to cart'), duration: Duration(seconds: 1)));
-                          }
-                        },
                       );
                     },
                   );
@@ -221,60 +267,69 @@ class CartBottomSheet extends ConsumerWidget {
     final subtotal = ref.watch(cartProvider.notifier).subtotal;
     final discount = ref.watch(discountProvider);
     final total = subtotal - discount;
+    final theme = Theme.of(context);
 
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppThemeConstants.radiusDialog)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Drag handle and Title
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            padding: const EdgeInsets.symmetric(vertical: AppThemeConstants.spacing12),
             child: Column(
               children: [
                 Container(
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade400,
+                    color: theme.colorScheme.outlineVariant,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(height: 12),
-                const Text('Current Cart', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: AppThemeConstants.spacing12),
+                Text('Current Cart', style: theme.textTheme.titleLarge),
               ],
             ),
           ),
-          const Divider(height: 1),
+          Divider(height: 1, color: theme.dividerColor),
           
           // Cart Items List
           Flexible(
             child: cart.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.all(32.0),
-                    child: Text('Cart is empty', style: TextStyle(fontSize: 16)),
+                ? Padding(
+                    padding: const EdgeInsets.all(AppThemeConstants.spacing32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.remove_shopping_cart_outlined, size: 64, color: theme.colorScheme.onSurfaceVariant),
+                        const SizedBox(height: AppThemeConstants.spacing16),
+                        Text('Cart is empty', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                      ],
+                    ),
                   )
                 : ListView.builder(
                     shrinkWrap: true,
+                    padding: const EdgeInsets.symmetric(vertical: AppThemeConstants.spacing8),
                     itemCount: cart.length,
                     itemBuilder: (context, index) {
                       final cartItem = cart[index];
                       return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        margin: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing16, vertical: AppThemeConstants.spacing4),
                         child: Padding(
-                          padding: const EdgeInsets.all(12.0),
+                          padding: const EdgeInsets.all(AppThemeConstants.spacing12),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Expanded(child: Text(cartItem.itemName, style: const TextStyle(fontWeight: FontWeight.bold))),
-                                  const SizedBox(width: 8),
-                                  Text('LKR ${cartItem.total}'),
+                                  Expanded(child: Text(cartItem.itemName, style: theme.textTheme.titleMedium)),
+                                  const SizedBox(width: AppThemeConstants.spacing8),
+                                  Text('LKR ${cartItem.total}', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary)),
                                 ],
                               ),
                               if (cartItem.isSerialized) ...[
@@ -282,9 +337,9 @@ class CartBottomSheet extends ConsumerWidget {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text('  IMEI: $imei', style: const TextStyle(fontSize: 12)),
+                                      Text('  IMEI: $imei', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                                       IconButton(
-                                        icon: const Icon(Icons.close, size: 16, color: Colors.red),
+                                        icon: Icon(Icons.close, size: 16, color: theme.colorScheme.error),
                                         onPressed: () => ref.read(cartProvider.notifier).removeImei(cartItem.itemId, imei),
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(),
@@ -292,31 +347,43 @@ class CartBottomSheet extends ConsumerWidget {
                                     ],
                                   )
                               ] else ...[
-                                const SizedBox(height: 8),
+                                const SizedBox(height: AppThemeConstants.spacing8),
                                 Row(
                                   children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.remove_circle_outline),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      onPressed: () => ref.read(cartProvider.notifier).updateQuantity(cartItem.itemId, cartItem.quantity - 1),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          IconButton(
+                                            icon: Icon(Icons.remove, size: 20, color: theme.colorScheme.onSurface),
+                                            padding: const EdgeInsets.all(AppThemeConstants.spacing4),
+                                            constraints: const BoxConstraints(),
+                                            onPressed: () => ref.read(cartProvider.notifier).updateQuantity(cartItem.itemId, cartItem.quantity - 1),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing8),
+                                            child: Text('${cartItem.quantity}', style: theme.textTheme.titleMedium),
+                                          ),
+                                          IconButton(
+                                            icon: Icon(Icons.add, size: 20, color: theme.colorScheme.onSurface),
+                                            padding: const EdgeInsets.all(AppThemeConstants.spacing4),
+                                            constraints: const BoxConstraints(),
+                                            onPressed: () => ref.read(cartProvider.notifier).updateQuantity(cartItem.itemId, cartItem.quantity + 1),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text('${cartItem.quantity}', style: const TextStyle(fontSize: 16)),
-                                    const SizedBox(width: 8),
-                                    IconButton(
-                                      icon: const Icon(Icons.add_circle_outline),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      onPressed: () => ref.read(cartProvider.notifier).updateQuantity(cartItem.itemId, cartItem.quantity + 1),
-                                    ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: AppThemeConstants.spacing12),
                                     Expanded(
                                       child: Text(
                                         '@ LKR ${cartItem.unitPrice}',
                                         overflow: TextOverflow.ellipsis,
                                         maxLines: 1,
                                         textAlign: TextAlign.right,
+                                        style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                       ),
                                     ),
                                   ],
@@ -333,13 +400,13 @@ class CartBottomSheet extends ConsumerWidget {
           // Totals and Proceed Button
           Container(
             padding: EdgeInsets.only(
-              left: 16, right: 16, top: 16, 
-              bottom: MediaQuery.of(context).padding.bottom + 16
+              left: AppThemeConstants.spacing16, right: AppThemeConstants.spacing16, top: AppThemeConstants.spacing16, 
+              bottom: MediaQuery.of(context).padding.bottom + AppThemeConstants.spacing16
             ),
             decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
+              color: theme.colorScheme.surface,
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, -2))
+                BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5))
               ],
             ),
             child: Column(
@@ -348,29 +415,38 @@ class CartBottomSheet extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Subtotal:'),
-                    const SizedBox(width: 8),
+                    Text('Subtotal:', style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    const SizedBox(width: AppThemeConstants.spacing8),
                     Expanded(
                       child: Text(
                         'LKR $subtotal',
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
                         textAlign: TextAlign.right,
+                        style: theme.textTheme.titleMedium,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppThemeConstants.spacing8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Discount:'),
-                    const SizedBox(width: 8),
+                    Text('Discount:', style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    const SizedBox(width: AppThemeConstants.spacing8),
                     Expanded(
                       child: TextField(
                         keyboardType: TextInputType.number,
                         textAlign: TextAlign.right,
-                        decoration: const InputDecoration(isDense: true, hintText: '0.0'),
+                        decoration: InputDecoration(
+                          isDense: true, 
+                          hintText: '0.0',
+                          filled: false,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: theme.colorScheme.primary)),
+                          contentPadding: const EdgeInsets.symmetric(vertical: AppThemeConstants.spacing4),
+                        ),
                         onChanged: (val) {
                           final d = double.tryParse(val) ?? 0.0;
                           ref.read(discountProvider.notifier).state = d;
@@ -379,16 +455,16 @@ class CartBottomSheet extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const Divider(height: 24),
+                Divider(height: AppThemeConstants.spacing24, color: theme.dividerColor),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Total:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 8),
+                    Text('Total:', style: theme.textTheme.titleLarge),
+                    const SizedBox(width: AppThemeConstants.spacing8),
                     Expanded(
                       child: Text(
                         'LKR $total',
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: theme.textTheme.headlineSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
                         textAlign: TextAlign.right,
@@ -396,15 +472,14 @@ class CartBottomSheet extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                ElevatedButton(
+                const SizedBox(height: AppThemeConstants.spacing16),
+                FilledButton(
                   onPressed: cart.isEmpty ? null : () {
                     // Close the bottom sheet first
                     Navigator.pop(context);
                     // Then navigate to payment
                     Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const PaymentScreen()));
                   },
-                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
                   child: const Text('PROCEED TO PAYMENT'),
                 ),
               ],

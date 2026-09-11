@@ -6,14 +6,21 @@ import 'package:pos_system/core/error/failure.dart';
 import 'package:pos_system/providers/app_providers.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:pos_system/features/auth/data/activity_log_repository.dart';
+import 'package:pos_system/core/database/tables.dart';
+
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
-  return SettingsRepository(ref.watch(databaseProvider));
+  return SettingsRepository(
+    ref.watch(databaseProvider),
+    ref.watch(activityLogRepositoryProvider),
+  );
 });
 
 class SettingsRepository {
   final AppDatabase _db;
+  final ActivityLogRepository _activityLogRepo;
 
-  SettingsRepository(this._db);
+  SettingsRepository(this._db, this._activityLogRepo);
 
   Future<Either<Failure, String?>> getSetting(String key) async {
     try {
@@ -25,7 +32,7 @@ class SettingsRepository {
     }
   }
 
-  Future<Either<Failure, Unit>> setSetting(String key, String value) async {
+  Future<Either<Failure, Unit>> setSetting(String key, String value, {String? staffId}) async {
     try {
       await _db.into(_db.appSettings).insertOnConflictUpdate(
         AppSettingsCompanion(
@@ -33,6 +40,16 @@ class SettingsRepository {
           value: Value(value),
         ),
       );
+
+      // Only log user-facing setting changes, not system stuff like install_id or last_backup
+      if (!['install_id', 'last_backup_time', 'supabase_last_sync_timestamp'].contains(key)) {
+        await _activityLogRepo.logAction(
+          staffId: staffId,
+          actionType: ActivityActionType.settings_changed,
+          description: 'Updated setting: $key',
+        );
+      }
+
       return const Right(unit);
     } catch (e, st) {
       return Left(Failure('Failed to set setting', error: e, stackTrace: st));

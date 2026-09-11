@@ -9,15 +9,21 @@ import 'package:pos_system/features/billing/domain/cart_item.dart';
 import 'package:pos_system/features/billing/domain/sale.dart';
 import 'package:pos_system/providers/app_providers.dart';
 
+import 'package:pos_system/features/auth/data/activity_log_repository.dart';
+
 final billingRepositoryProvider = Provider<BillingRepository>((ref) {
-  return BillingRepository(ref.watch(databaseProvider));
+  return BillingRepository(
+    ref.watch(databaseProvider),
+    ref.watch(activityLogRepositoryProvider),
+  );
 });
 
 class BillingRepository {
   final AppDatabase _db;
+  final ActivityLogRepository _activityLogRepo;
   final _uuid = const Uuid();
 
-  BillingRepository(this._db);
+  BillingRepository(this._db, this._activityLogRepo);
 
   Future<Either<Failure, Sale>> processSale({
     required List<CartItem> cart,
@@ -33,6 +39,7 @@ class BillingRepository {
     double? amountTendered,
     double? changeDue,
     String? cashierName,
+    String? staffId, // for activity logging
   }) async {
     try {
       final saleId = _uuid.v4();
@@ -137,6 +144,12 @@ class BillingRepository {
           }
         }
       });
+
+      await _activityLogRepo.logAction(
+        staffId: staffId,
+        actionType: ActivityActionType.sale_created,
+        description: 'Completed sale of LKR $total (${paymentMethod.name})',
+      );
 
       return Right(Sale(
         id: saleId,

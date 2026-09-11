@@ -6,7 +6,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:pos_system/features/settings/presentation/settings_controller.dart';
 import 'package:pos_system/features/reports/presentation/reports_dashboard_screen.dart';
+import 'package:pos_system/features/auth/presentation/auth_controller.dart';
+import 'package:pos_system/features/auth/presentation/staff_management_screen.dart';
+import 'package:pos_system/features/auth/presentation/activity_log_screen.dart';
 import 'package:pos_system/core/backup/backup_service.dart';
+import 'package:pos_system/features/auth/data/activity_log_repository.dart';
+import 'package:pos_system/core/database/tables.dart';
+import 'package:pos_system/core/theme/app_theme.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -185,10 +191,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final settingsState = ref.watch(storeSettingsProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Switch User / Logout',
+            onPressed: () async {
+              final user = ref.read(authStateProvider);
+              if (user != null) {
+                await ref.read(activityLogRepositoryProvider).logAction(
+                  staffId: user.id,
+                  actionType: ActivityActionType.staff_login,
+                  description: 'Logged out',
+                );
+              }
+              ref.read(authStateProvider.notifier).state = null;
+            },
+          ),
+        ],
       ),
       body: settingsState.when(
         data: (settings) {
@@ -205,16 +229,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _defaultReceiptDelivery = settings.defaultReceiptDelivery!;
           }
           
+          final isOwner = ref.watch(authStateProvider)?.isOwner == true;
+
           return ListView(
-            padding: const EdgeInsets.all(16.0),
+            padding: AppThemeConstants.defaultPadding,
             children: [
-              Card(
-                elevation: 0,
-                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+              if (!isOwner) ...[
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: theme.colorScheme.primaryContainer,
+                    foregroundColor: theme.colorScheme.onPrimaryContainer,
+                    child: const Icon(Icons.person),
+                  ),
+                  title: Text('Logged in as: ${ref.watch(authStateProvider)?.name}', style: theme.textTheme.titleMedium),
+                  subtitle: Text('Role: ${ref.watch(authStateProvider)?.role.name.toUpperCase()}', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                ),
+                const Divider(),
+              ],
+
+              if (isOwner) ...[
+                Card(
+                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
                 child: ListTile(
-                  leading: const Icon(Icons.analytics),
-                  title: const Text('Reports & Analytics', style: TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: const Text('View sales, repairs, and inventory performance'),
+                  leading: Icon(Icons.analytics, color: theme.colorScheme.primary),
+                  title: Text('Reports & Analytics', style: theme.textTheme.titleMedium),
+                  subtitle: Text('View sales, repairs, and inventory performance', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     Navigator.push(
@@ -224,9 +263,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   },
                 ),
               ),
-              const SizedBox(height: 24),
-              const Text('Store Profile', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppThemeConstants.spacing24),
+              Text('Store Profile', style: theme.textTheme.titleMedium),
+              const SizedBox(height: AppThemeConstants.spacing12),
               TextField(
                 controller: _storeNameController,
                 decoration: const InputDecoration(
@@ -234,29 +273,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppThemeConstants.spacing16),
               TextField(
                 controller: _storeAddressController,
                 decoration: const InputDecoration(
                   labelText: 'Store Address',
-                  border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppThemeConstants.spacing16),
               TextField(
                 controller: _storePhoneController,
                 decoration: const InputDecoration(
                   labelText: 'Store Phone',
-                  border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.phone,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppThemeConstants.spacing16),
               DropdownButtonFormField<String>(
                 initialValue: _defaultReceiptDelivery,
                 decoration: const InputDecoration(
                   labelText: 'Default Receipt Delivery',
-                  border: OutlineInputBorder(),
                 ),
                 items: const [
                   DropdownMenuItem(value: 'ask', child: Text('Ask each time')),
@@ -271,9 +307,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   }
                 },
               ),
-              const SizedBox(height: 24),
-              const Text('Payment QR Code', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppThemeConstants.spacing24),
+              Text('Payment QR Code', style: theme.textTheme.titleMedium),
+              const SizedBox(height: AppThemeConstants.spacing12),
               if (settings.qrPaymentImagePath != null && settings.qrPaymentImagePath!.isNotEmpty) ...[
                 Center(
                   child: Image.file(
@@ -301,42 +337,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ],
                 ),
               ] else ...[
-                ListTile(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(color: Theme.of(context).dividerColor),
-                  ),
-                  leading: const Icon(Icons.qr_code),
-                  title: const Text('No QR Code configured'),
-                  subtitle: const Text('Upload a static payment QR for customers to scan.'),
-                  trailing: ElevatedButton(
-                    onPressed: _pickQrImage,
-                    child: const Text('Upload'),
+                Card(
+                  child: ListTile(
+                    leading: Icon(Icons.qr_code, color: theme.colorScheme.onSurfaceVariant),
+                    title: Text('No QR Code configured', style: theme.textTheme.titleSmall),
+                    subtitle: Text('Upload a static payment QR for customers to scan.', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    trailing: FilledButton.tonal(
+                      onPressed: _pickQrImage,
+                      child: const Text('Upload'),
+                    ),
                   ),
                 ),
               ],
               
-              const SizedBox(height: 24),
-              const Text('Database Backup', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppThemeConstants.spacing24),
+              Text('Database Backup', style: theme.textTheme.titleMedium),
+              const SizedBox(height: AppThemeConstants.spacing12),
               Card(
-                elevation: 0,
-                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: AppThemeConstants.cardPadding,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
                         'Last Backup: ${settings.lastBackupAt != null ? settings.lastBackupAt!.toLocal().toString().split('.')[0] : 'Never'}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: theme.textTheme.titleSmall,
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
+                      const SizedBox(height: AppThemeConstants.spacing8),
+                      Text(
                         'Backups are securely stored in the cloud. A backup is automatically run once daily on startup.',
-                        style: TextStyle(fontSize: 12),
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppThemeConstants.spacing16),
                       Row(
                         children: [
                           Expanded(
@@ -372,10 +405,41 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ],
                   ),
+                  ),
                 ),
-              ),
+              ], // End of if (isOwner) ...[
 
-              const SizedBox(height: 24),
+              if (isOwner) ...[
+                const SizedBox(height: AppThemeConstants.spacing24),
+                Text('Admin Controls', style: theme.textTheme.titleMedium),
+                const SizedBox(height: AppThemeConstants.spacing12),
+                Card(
+                  color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: Icon(Icons.people, color: theme.colorScheme.primary),
+                        title: Text('Staff Management', style: theme.textTheme.titleSmall),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const StaffManagementScreen()));
+                        },
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: Icon(Icons.history, color: theme.colorScheme.primary),
+                        title: Text('Activity Log', style: theme.textTheme.titleSmall),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityLogScreen()));
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: AppThemeConstants.spacing24),
               ElevatedButton(
                 onPressed: _saveStoreSettings,
                 child: const Text('Save Settings'),

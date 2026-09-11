@@ -11,6 +11,7 @@ import 'package:pos_system/features/repair_jobs/domain/repair_notifier.dart';
 
 import 'package:pos_system/core/sms/sms_gateway.dart';
 import 'package:pos_system/features/settings/data/settings_repository.dart';
+import 'package:pos_system/features/auth/data/activity_log_repository.dart';
 
 final repairNotifierProvider = Provider<RepairNotifier>((ref) {
   return RepairSmsNotifier(
@@ -23,15 +24,17 @@ final repairJobsRepositoryProvider = Provider<RepairJobsRepository>((ref) {
   return RepairJobsRepository(
     ref.watch(databaseProvider),
     ref.watch(repairNotifierProvider),
+    ref.watch(activityLogRepositoryProvider),
   );
 });
 
 class RepairJobsRepository {
   final AppDatabase _db;
   final RepairNotifier _notifier;
+  final ActivityLogRepository _activityLogRepo;
   final _uuid = const Uuid();
 
-  RepairJobsRepository(this._db, this._notifier);
+  RepairJobsRepository(this._db, this._notifier, this._activityLogRepo);
 
   Future<Either<Failure, RepairJob>> createRepairJob({
     required String customerName,
@@ -41,6 +44,7 @@ class RepairJobsRepository {
     required String reportedIssue,
     required String deviceConditionNotes,
     double? estimatedCost,
+    String? staffId,
   }) async {
     try {
       final jobId = _uuid.v4();
@@ -78,6 +82,12 @@ class RepairJobsRepository {
                 note: const Value('Job created'),
               ),
             );
+
+        await _activityLogRepo.logAction(
+          staffId: staffId,
+          actionType: ActivityActionType.repair_status_changed,
+          description: 'Created repair job $jobNumber for $customerName',
+        );
 
         return await getRepairJobById(jobId);
       });
@@ -167,6 +177,7 @@ class RepairJobsRepository {
     String? assignedTechnicianName,
     double? finalCost,
     String? statusNote,
+    String? staffId,
   }) async {
     try {
       final now = DateTime.now();
@@ -202,6 +213,12 @@ class RepairJobsRepository {
                 ),
               );
           shouldNotify = true;
+          
+          await _activityLogRepo.logAction(
+            staffId: staffId,
+            actionType: ActivityActionType.repair_status_changed,
+            description: 'Updated repair job $id status to ${newStatus.name}',
+          );
         }
 
         return await getRepairJobById(id);
