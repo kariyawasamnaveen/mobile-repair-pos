@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -10,6 +11,7 @@ import 'package:pos_system/features/auth/presentation/auth_controller.dart';
 import 'package:pos_system/features/auth/presentation/staff_management_screen.dart';
 import 'package:pos_system/features/auth/presentation/activity_log_screen.dart';
 import 'package:pos_system/core/backup/backup_service.dart';
+import 'package:pos_system/core/backup/backup_encryption_service.dart';
 import 'package:pos_system/features/auth/data/activity_log_repository.dart';
 import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/core/theme/app_theme.dart';
@@ -79,6 +81,46 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _removeQrImage() async {
     await ref.read(storeSettingsProvider.notifier).updateQrImagePath(null);
+  }
+
+  Future<void> _showRecoveryKeyDialog(BuildContext context, WidgetRef ref) async {
+    final key = await ref.read(backupEncryptionServiceProvider).getRecoveryKey();
+    if (!context.mounted) return;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Recovery Key'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'WARNING: This key encrypts your cloud backups. If you lose this device and do not have this key saved, your backups cannot be restored.',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(8),
+              color: Colors.grey.shade200,
+              child: SelectableText(key, style: const TextStyle(fontFamily: 'monospace')),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: key));
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied to clipboard')));
+            },
+            child: const Text('COPY'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CLOSE'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showRestoreDialog(BuildContext context) async {
@@ -416,8 +458,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       const SizedBox(height: AppThemeConstants.spacing8),
                       Text(
-                        'Backups are securely stored in the cloud. A backup is automatically run once daily on startup.',
+                        'Backups are securely encrypted and stored in the cloud. They can only be restored with your recovery key on this device.',
                         style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: AppThemeConstants.spacing12),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.key),
+                        label: const Text('View Recovery Key'),
+                        onPressed: () => _showRecoveryKeyDialog(context, ref),
                       ),
                       const SizedBox(height: AppThemeConstants.spacing16),
                       Row(

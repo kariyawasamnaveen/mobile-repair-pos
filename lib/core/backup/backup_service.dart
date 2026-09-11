@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:fpdart/fpdart.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -8,12 +9,14 @@ import 'package:pos_system/features/settings/data/settings_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/providers/app_providers.dart';
+import 'package:pos_system/core/backup/backup_encryption_service.dart';
 import 'dart:developer' as developer;
 
 final backupServiceProvider = Provider<BackupService>((ref) {
   return BackupService(
     ref.watch(databaseProvider),
     ref.watch(settingsRepositoryProvider),
+    ref.watch(backupEncryptionServiceProvider),
     Supabase.instance.client,
   );
 });
@@ -21,11 +24,12 @@ final backupServiceProvider = Provider<BackupService>((ref) {
 class BackupService {
   final AppDatabase _db;
   final SettingsRepository _settingsRepository;
+  final BackupEncryptionService _encryptionService;
   final SupabaseClient _supabase;
   
   static const String _bucketName = 'backups';
 
-  BackupService(this._db, this._settingsRepository, this._supabase);
+  BackupService(this._db, this._settingsRepository, this._encryptionService, this._supabase);
 
   Future<Either<Failure, void>> backupDatabase() async {
     try {
@@ -46,13 +50,16 @@ class BackupService {
       }
 
       final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
-      final fileName = 'backup_$timestamp.sqlite';
+      final fileName = 'backup_$timestamp.sqlite.enc';
       final storagePath = '$installId/$fileName';
 
-      // Upload to Supabase Storage
-      await _supabase.storage.from(_bucketName).upload(
+      // Read DB file, encrypt, and upload
+      final plainBytes = await dbFile.readAsBytes();
+      final cipherBytes = await _encryptionService.encryptFile(plainBytes);
+
+      await _supabase.storage.from(_bucketName).uploadBinary(
         storagePath,
-        dbFile,
+        Uint8List.fromList(cipherBytes),
         fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
       );
 
@@ -80,8 +87,8 @@ class BackupService {
 
       final files = await _supabase.storage.from(_bucketName).list(path: installId);
       
-      // Filter only sqlite files
-      final backups = files.where((f) => f.name.endsWith('.sqlite')).toList();
+      // Filter only encrypted sqlite files (and old unencrypted ones if any remain)
+      final backups = files.where((f) => f.name.endsWith('.sqlite.enc') || f.name.endsWith('.sqlite')).toList();
       // Sort newest first
       backups.sort((a, b) => b.name.compareTo(a.name));
       
@@ -102,6 +109,19 @@ class BackupService {
 
       final storagePath = '$installId/$fileName';
       final bytes = await _supabase.storage.from(_bucketName).download(storagePath);
+      // Decrypt if it's an encrypted backup
+      List<int> plainBytes;
+      if (fileName.endsWith('.enc')) {
+        try {
+          plainBytes = await _encryptionService.decryptFile(bytes);
+        } catch (e) {
+          developer.log('Decryption failed', name: 'BackupService', error: e);
+          return Left(Failure('Could not decrypt backup — the recovery key may be missing or incorrect.'));
+        }
+      } else {
+        // Fallback for old unencrypted backups
+        plainBytes = bytes;
+      }
 
       // Close the current database connection
       await _db.close();
@@ -116,7 +136,7 @@ class BackupService {
       if (await shmFile.exists()) await shmFile.delete();
 
       // Overwrite the main DB file
-      await dbFile.writeAsBytes(bytes, flush: true);
+      await dbFile.writeAsBytes(plainBytes, flush: true);
 
       developer.log('Restore successful: $fileName. App needs to restart.', name: 'BackupService');
       
@@ -130,7 +150,7 @@ class BackupService {
   Future<void> _cleanupOldBackups(String installId) async {
     try {
       final files = await _supabase.storage.from(_bucketName).list(path: installId);
-      final backups = files.where((f) => f.name.endsWith('.sqlite')).toList();
+      final backups = files.where((f) => f.name.endsWith('.sqlite.enc') || f.name.endsWith('.sqlite')).toList();
       
       if (backups.isEmpty) return;
 
@@ -138,10 +158,10 @@ class BackupService {
       final filesToDelete = <String>[];
 
       for (final file in backups) {
-        // Parse date from filename: backup_YYYY-MM-DDTHH-MM-SS.sqlite
+        // Parse date from filename: backup_YYYY-MM-DDTHH-MM-SS.sqlite or .sqlite.enc
         final name = file.name;
         try {
-          final timeString = name.replaceAll('backup_', '').replaceAll('.sqlite', '').replaceAll('-', ':').replaceFirst(':', '-').replaceFirst(':', '-');
+          final timeString = name.replaceAll('backup_', '').replaceAll('.sqlite.enc', '').replaceAll('.sqlite', '').replaceAll('-', ':').replaceFirst(':', '-').replaceFirst(':', '-');
           final fileDate = DateTime.tryParse(timeString);
           if (fileDate != null) {
             final difference = now.difference(fileDate);
