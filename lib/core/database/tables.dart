@@ -2,12 +2,13 @@
 import 'package:drift/drift.dart';
 
 enum ItemCategory { phone, accessory, sparePart, other }
-enum MovementReason { sale, restock, adjustment, returnItem, repairUsage }
+enum MovementReason { sale, restock, adjustment, returnItem, repairUsage, purchaseReceived }
 enum PaymentMethod { cash, card, credit, qr }
 enum RepairJobStatus { received, diagnosing, awaitingCustomerApproval, inProgress, readyForPickup, delivered, cancelled }
 enum CreditPaymentMethod { cash, card, qr }
+enum PurchaseOrderStatus { draft, ordered, partiallyReceived, received, cancelled }
 enum StaffRole { owner, cashier, technician }
-enum ActivityActionType { sale_created, item_price_changed, stock_adjusted, repair_status_changed, payment_collected, settings_changed, staff_login }
+enum ActivityActionType { sale_created, item_price_changed, stock_adjusted, repair_status_changed, payment_collected, settings_changed, staff_login, po_created, po_received, supplier_payment }
 
 @DataClassName('SettingItem')
 class AppSettings extends Table {
@@ -171,4 +172,62 @@ class ActivityLogs extends Table {
   TextColumn get actionType => textEnum<ActivityActionType>()();
   TextColumn get description => text()();
   DateTimeColumn get timestamp => dateTime().withDefault(currentDateAndTime)();
+}
+
+@DataClassName('SupplierEntity')
+class Suppliers extends Table {
+  TextColumn get id => text()(); // UUID v4
+  TextColumn get name => text()();
+  TextColumn get phone => text().nullable()();
+  TextColumn get address => text().nullable()();
+  TextColumn get notes => text().nullable()();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('PurchaseOrderEntity')
+class PurchaseOrders extends Table {
+  TextColumn get id => text()(); // UUID v4
+  TextColumn get poNumber => text().unique()(); // PO-0001
+  TextColumn get supplierId => text().references(Suppliers, #id)();
+  TextColumn get status => textEnum<PurchaseOrderStatus>().withDefault(const Constant('draft'))();
+  DateTimeColumn get orderDate => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get expectedDate => dateTime().nullable()();
+  RealColumn get totalAmount => real().withDefault(const Constant(0.0))();
+  RealColumn get amountPaid => real().withDefault(const Constant(0.0))();
+  RealColumn get balanceDue => real().withDefault(const Constant(0.0))();
+  TextColumn get notes => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('PurchaseOrderItemEntity')
+class PurchaseOrderItems extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get purchaseOrderId => text().references(PurchaseOrders, #id)();
+  TextColumn get itemId => text().nullable().references(Items, #id)();
+  TextColumn get itemNameText => text().nullable()(); // fallback if item not in inventory
+  IntColumn get quantityOrdered => integer()();
+  IntColumn get quantityReceived => integer().withDefault(const Constant(0))();
+  RealColumn get unitCost => real()();
+  RealColumn get lineTotal => real()();
+}
+
+@DataClassName('SupplierPaymentEntity')
+class SupplierPayments extends Table {
+  TextColumn get id => text()(); // UUID v4
+  TextColumn get supplierId => text().references(Suppliers, #id)();
+  TextColumn get purchaseOrderId => text().nullable().references(PurchaseOrders, #id)();
+  RealColumn get amount => real()();
+  TextColumn get paymentMethod => textEnum<CreditPaymentMethod>()();
+  DateTimeColumn get paidAt => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get notes => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }

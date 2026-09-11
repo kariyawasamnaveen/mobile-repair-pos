@@ -10,6 +10,7 @@ import 'package:pos_system/features/reports/presentation/reports_dashboard_scree
 import 'package:pos_system/features/auth/presentation/auth_controller.dart';
 import 'package:pos_system/features/auth/presentation/staff_management_screen.dart';
 import 'package:pos_system/features/auth/presentation/activity_log_screen.dart';
+import 'package:pos_system/features/suppliers/presentation/supplier_list_screen.dart';
 import 'package:pos_system/core/backup/backup_service.dart';
 import 'package:pos_system/core/backup/backup_encryption_service.dart';
 import 'package:pos_system/features/auth/data/activity_log_repository.dart';
@@ -440,6 +441,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onChanged: (val) => setState(() => _isTaxInclusive = val),
                 ),
               ],
+
+              const SizedBox(height: AppThemeConstants.spacing24),
+              const Divider(),
+              Text('Suppliers & Purchasing', style: theme.textTheme.titleMedium),
+              const SizedBox(height: AppThemeConstants.spacing12),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.local_shipping),
+                  title: const Text('Manage Suppliers & POs'),
+                  subtitle: const Text('View suppliers, purchase orders, and record supplier payments.'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SupplierListScreen()));
+                  },
+                ),
+              ),
               
               const SizedBox(height: AppThemeConstants.spacing24),
               const Divider(),

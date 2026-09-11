@@ -169,6 +169,7 @@ class PdfReportGenerator {
           _buildSummaryItem('Transactions', dashboard.totalTransactions.toString()),
           _buildSummaryItem('Total Tax', currency.format(dashboard.totalTaxCollected)),
           _buildSummaryItem('Out. Credit', currency.format(dashboard.outstandingCredit)),
+          _buildSummaryItem('Owed to Suppl.', currency.format(dashboard.totalOwedToSuppliers)),
           _buildSummaryItem('Low Stock', dashboard.lowStockItemsCount.toString()),
         ],
       ),

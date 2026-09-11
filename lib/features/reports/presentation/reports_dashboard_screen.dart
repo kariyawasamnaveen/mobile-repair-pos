@@ -159,6 +159,13 @@ class _SummaryTab extends ConsumerWidget {
             ),
             const SizedBox(height: AppThemeConstants.spacing8),
             _SummaryCard(
+              title: 'Total Owed to Suppliers',
+              value: 'LKR ${summary.totalOwedToSuppliers.toStringAsFixed(2)}',
+              icon: Icons.local_shipping_outlined,
+              color: AppTheme.warningColor,
+            ),
+            const SizedBox(height: AppThemeConstants.spacing8),
+            _SummaryCard(
               title: 'Low Stock Items',
               value: summary.lowStockItemsCount.toString(),
               icon: Icons.warning_amber_rounded,

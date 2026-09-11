@@ -13,6 +13,7 @@ class DashboardSummary {
   final double totalRepairRevenue;
   final double totalTaxCollected;
   final double outstandingCredit; // snapshot
+  final double totalOwedToSuppliers;
   final int lowStockItemsCount; // snapshot
   
   const DashboardSummary({
@@ -21,6 +22,7 @@ class DashboardSummary {
     required this.totalRepairRevenue,
     required this.totalTaxCollected,
     required this.outstandingCredit,
+    required this.totalOwedToSuppliers,
     required this.lowStockItemsCount,
   });
 }

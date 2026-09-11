@@ -47,12 +47,20 @@ class ReportsRepository {
       ).getSingle();
       final lowStockCount = stockRes.read<int?>('low_stock') ?? 0;
       
+      // 5. Total owed to suppliers (snapshot)
+      final supplierRes = await _db.customSelect(
+        'SELECT SUM(balance_due) as owed FROM purchase_orders WHERE status != ?',
+        variables: [Variable.withString('cancelled')],
+      ).getSingle();
+      final totalOwedToSuppliers = supplierRes.read<double?>('owed') ?? 0.0;
+      
       return Right(DashboardSummary(
         totalSalesRevenue: totalSalesRevenue,
         totalTransactions: totalTransactions,
         totalRepairRevenue: totalRepairRevenue,
         totalTaxCollected: totalTaxCollected,
         outstandingCredit: outstandingCredit,
+        totalOwedToSuppliers: totalOwedToSuppliers,
         lowStockItemsCount: lowStockCount,
       ));
     } catch (e, st) {
