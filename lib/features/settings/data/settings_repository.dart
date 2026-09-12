@@ -91,4 +91,12 @@ class SettingsRepository {
   Future<Either<Failure, Unit>> setLastBackupTime(DateTime dt) async {
     return setSetting('last_backup_at', dt.toIso8601String());
   }
+
+  Future<Either<Failure, String?>> getCurrentBranchId() async {
+    return getSetting('current_branch_id');
+  }
+
+  Future<Either<Failure, Unit>> setCurrentBranchId(String branchId) async {
+    return setSetting('current_branch_id', branchId);
+  }
 }

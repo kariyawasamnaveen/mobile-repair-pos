@@ -12,16 +12,22 @@ import 'package:pos_system/core/error/failure.dart';
 import 'package:pos_system/features/auth/domain/auth_models.dart';
 import 'package:pos_system/providers/app_providers.dart';
 
+import 'package:pos_system/features/settings/data/branch_repository.dart';
+
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository(ref.watch(databaseProvider));
+  return AuthRepository(
+    ref.watch(databaseProvider),
+    ref.watch(branchRepositoryProvider),
+  );
 });
 
 class AuthRepository {
   final AppDatabase _db;
+  final BranchRepository _branchRepo;
   final _uuid = const Uuid();
   final _random = Random.secure();
 
-  AuthRepository(this._db);
+  AuthRepository(this._db, this._branchRepo);
 
   /// Helper to hash a PIN with a given salt
   String _hashPin(String pin, String salt) {
@@ -80,6 +86,9 @@ class AuthRepository {
       );
 
       await _db.into(_db.staffMembers).insert(entity);
+      
+      // Bootstrap the default branch
+      await _branchRepo.bootstrapDefaultBranch();
       
       final inserted = await (_db.select(_db.staffMembers)..where((t) => t.id.equals(id))).getSingle();
       return Right(_mapToDomain(inserted));

@@ -6,10 +6,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:pos_system/features/settings/presentation/settings_controller.dart';
+import 'package:pos_system/features/settings/presentation/branch_management_controller.dart';
 import 'package:pos_system/features/reports/presentation/reports_dashboard_screen.dart';
 import 'package:pos_system/features/auth/presentation/auth_controller.dart';
 import 'package:pos_system/features/auth/presentation/staff_management_screen.dart';
+import 'package:pos_system/features/settings/presentation/branch_management_screen.dart';
 import 'package:pos_system/features/auth/presentation/activity_log_screen.dart';
+import 'package:pos_system/features/settings/data/settings_repository.dart';
 import 'package:pos_system/features/suppliers/presentation/supplier_list_screen.dart';
 import 'package:pos_system/core/backup/backup_service.dart';
 import 'package:pos_system/core/backup/backup_encryption_service.dart';
@@ -243,6 +246,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  Future<void> _showChangeBranchDialog() async {
+    final activeBranches = ref.read(branchesProvider).valueOrNull?.where((b) => b.isActive).toList() ?? [];
+    
+    if (activeBranches.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No active branches available.')));
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Change Current Branch', style: TextStyle(color: Colors.red)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'WARNING: Changing the branch will associate all future transactions on this device to the newly selected branch. This should only be done if you are physically relocating this device to another branch.',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              ...activeBranches.map((branch) => ListTile(
+                title: Text(branch.name),
+                subtitle: Text(branch.address ?? ''),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+                  await ref.read(settingsRepositoryProvider).setCurrentBranchId(branch.id);
+                  ref.invalidate(currentBranchProvider);
+                  if (mounted) {
+                    scaffoldMessenger.showSnackBar(SnackBar(content: Text('Branch changed to ${branch.name}')));
+                  }
+                },
+              )),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settingsState = ref.watch(storeSettingsProvider);
@@ -327,6 +377,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: AppThemeConstants.spacing24),
+              if (isOwner) ...[
+                Text('Current Installation Branch', style: theme.textTheme.titleMedium),
+                const SizedBox(height: AppThemeConstants.spacing12),
+                Consumer(
+                  builder: (context, ref, child) {
+                    final currentBranchAsync = ref.watch(currentBranchProvider);
+                    return Card(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      child: ListTile(
+                        leading: Icon(Icons.store, color: theme.colorScheme.primary),
+                        title: currentBranchAsync.when(
+                          data: (b) => Text(b?.name ?? 'Not Set', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          loading: () => const Text('Loading...'),
+                          error: (err, stack) => const Text('Error loading branch'),
+                        ),
+                        subtitle: const Text('Transactions on this device are attributed to this branch.'),
+                        trailing: OutlinedButton(
+                          onPressed: _showChangeBranchDialog,
+                          child: const Text('Change'),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: AppThemeConstants.spacing24),
+              ],
               Text('Store Profile', style: theme.textTheme.titleMedium),
               const SizedBox(height: AppThemeConstants.spacing12),
               TextField(
@@ -538,6 +614,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: () {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const StaffManagementScreen()));
+                        },
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: Icon(Icons.storefront, color: theme.colorScheme.primary),
+                        title: Text('Branch Management', style: theme.textTheme.titleSmall),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const BranchManagementScreen()));
                         },
                       ),
                       const Divider(height: 1),

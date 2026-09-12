@@ -165,6 +165,19 @@ class StaffMembers extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+@DataClassName('BranchEntity')
+class Branches extends Table {
+  TextColumn get id => text()(); // UUID v4
+  TextColumn get name => text()();
+  TextColumn get address => text().nullable()();
+  TextColumn get phone => text().nullable()();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DataClassName('ActivityLogEntity')
 class ActivityLogs extends Table {
   IntColumn get id => integer().autoIncrement()();

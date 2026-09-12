@@ -13,12 +13,13 @@ part 'app_database.g.dart';
   PurchaseOrders,
   PurchaseOrderItems,
   SupplierPayments,
+  Branches,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration {
@@ -104,6 +105,14 @@ class AppDatabase extends _$AppDatabase {
           if (!existingTables.contains('supplier_payments')) {
             await m.createTable(supplierPayments);
             await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_supplier_payments_supplier_id ON supplier_payments(supplier_id);');
+          }
+        }
+        if (from < 11) {
+          final existingTablesResult = await m.database.customSelect("SELECT name FROM sqlite_master WHERE type='table'").get();
+          final existingTables = existingTablesResult.map((row) => row.read<String>('name')).toSet();
+          
+          if (!existingTables.contains('branches')) {
+            await m.createTable(branches);
           }
         }
       },
