@@ -16,6 +16,7 @@ class _BootstrapOwnerScreenState extends ConsumerState<BootstrapOwnerScreen> {
   final _nameController = TextEditingController();
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
+  final _businessAccountIdController = TextEditingController();
   bool _isLoading = false;
   String? _error;
 
@@ -24,6 +25,7 @@ class _BootstrapOwnerScreenState extends ConsumerState<BootstrapOwnerScreen> {
     _nameController.dispose();
     _pinController.dispose();
     _confirmPinController.dispose();
+    _businessAccountIdController.dispose();
     super.dispose();
   }
 
@@ -41,7 +43,11 @@ class _BootstrapOwnerScreenState extends ConsumerState<BootstrapOwnerScreen> {
     });
 
     final repo = ref.read(authRepositoryProvider);
-    final res = await repo.createFirstOwner(_nameController.text.trim(), _pinController.text);
+    final res = await repo.createFirstOwner(
+      _nameController.text.trim(), 
+      _pinController.text,
+      _businessAccountIdController.text.trim(),
+    );
     
     if (mounted) {
       res.fold(
@@ -161,6 +167,27 @@ class _BootstrapOwnerScreenState extends ConsumerState<BootstrapOwnerScreen> {
                           if (v == null || v.isEmpty) return 'Required';
                           return null;
                         },
+                      ),
+                      const SizedBox(height: AppThemeConstants.spacing24),
+                      const Divider(),
+                      const SizedBox(height: AppThemeConstants.spacing16),
+                      Text(
+                        'Multi-Tenant Setup',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppThemeConstants.spacing8),
+                      Text(
+                        'If you\'re setting up an additional branch for an existing business, enter the SAME Business Account ID used on your other branch\'s device. If this is a new business, create a new unique ID (e.g. a long random string or UUID).',
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: AppThemeConstants.spacing16),
+                      TextFormField(
+                        controller: _businessAccountIdController,
+                        decoration: const InputDecoration(
+                          labelText: 'Business Account ID',
+                          prefixIcon: Icon(Icons.business),
+                        ),
+                        validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
                       ),
                       const SizedBox(height: AppThemeConstants.spacing32),
                       SizedBox(

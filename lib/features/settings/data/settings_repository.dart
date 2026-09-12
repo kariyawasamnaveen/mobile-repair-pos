@@ -103,4 +103,12 @@ class SettingsRepository {
   Future<Either<Failure, Unit>> setCurrentBranchId(String branchId) async {
     return setSetting('current_branch_id', branchId);
   }
+
+  Future<Either<Failure, String?>> getBusinessAccountId() async {
+    return getSetting('business_account_id');
+  }
+
+  Future<Either<Failure, Unit>> setBusinessAccountId(String id) async {
+    return setSetting('business_account_id', id);
+  }
 }

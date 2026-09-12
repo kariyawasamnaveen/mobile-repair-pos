@@ -13,21 +13,24 @@ import 'package:pos_system/features/auth/domain/auth_models.dart';
 import 'package:pos_system/providers/app_providers.dart';
 
 import 'package:pos_system/features/settings/data/branch_repository.dart';
+import 'package:pos_system/features/settings/data/settings_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(
     ref.watch(databaseProvider),
     ref.watch(branchRepositoryProvider),
+    ref.watch(settingsRepositoryProvider),
   );
 });
 
 class AuthRepository {
   final AppDatabase _db;
   final BranchRepository _branchRepo;
+  final SettingsRepository _settingsRepo;
   final _uuid = const Uuid();
   final _random = Random.secure();
 
-  AuthRepository(this._db, this._branchRepo);
+  AuthRepository(this._db, this._branchRepo, this._settingsRepo);
 
   /// Helper to hash a PIN with a given salt
   String _hashPin(String pin, String salt) {
@@ -66,7 +69,7 @@ class AuthRepository {
   }
 
   /// Bootstrap the initial Owner account
-  Future<Either<Failure, StaffMember>> createFirstOwner(String name, String pin) async {
+  Future<Either<Failure, StaffMember>> createFirstOwner(String name, String pin, String businessAccountId) async {
     try {
       final existing = await hasAnyStaff();
       if (existing.isRight() && existing.getRight().toNullable()! == true) {
@@ -89,6 +92,9 @@ class AuthRepository {
       
       // Bootstrap the default branch
       await _branchRepo.bootstrapDefaultBranch();
+      
+      // Set the Business Account ID for Multi-Tenant Isolation
+      await _settingsRepo.setBusinessAccountId(businessAccountId);
       
       final inserted = await (_db.select(_db.staffMembers)..where((t) => t.id.equals(id))).getSingle();
       return Right(_mapToDomain(inserted));

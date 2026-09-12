@@ -44,6 +44,12 @@ class BackupService {
 
   Future<Either<Failure, void>> backupDatabase() async {
     try {
+      final bizIdRes = await _settingsRepository.getBusinessAccountId();
+      if (bizIdRes.isLeft() || bizIdRes.getRight().toNullable() == null) {
+        return Left(Failure('Business Account ID not found. Please set it in Settings.'));
+      }
+      final bizId = bizIdRes.getRight().toNullable()!;
+
       final installIdRes = await _settingsRepository.getOrCreateInstallId();
       if (installIdRes.isLeft()) {
         return Left(installIdRes.fold((l) => l, (r) => throw Exception()));
@@ -62,7 +68,7 @@ class BackupService {
 
       final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
       final fileName = 'backup_$timestamp.sqlite.enc';
-      final storagePath = '$installId/$fileName';
+      final storagePath = 'business_accounts/$bizId/backups/$installId/$fileName';
 
       // Read DB file, encrypt, and upload
       final plainBytes = await dbFile.readAsBytes();
@@ -80,13 +86,13 @@ class BackupService {
 
       // Attempt to upload cross-branch reporting summary
       try {
-        await _uploadReportingSummary(installId);
+        await _uploadReportingSummary(installId, bizId);
       } catch (e) {
         developer.log('Failed to upload reporting summary', name: 'BackupService', error: e);
       }
 
       // Cleanup old backups in background (fire and forget)
-      _cleanupOldBackups(installId).ignore();
+      _cleanupOldBackups(installId, bizId).ignore();
 
       return const Right(null);
     } catch (e, st) {
@@ -95,7 +101,7 @@ class BackupService {
     }
   }
 
-  Future<void> _uploadReportingSummary(String installId) async {
+  Future<void> _uploadReportingSummary(String installId, String bizId) async {
     final now = DateTime.now();
     final monthStr = '${now.year}-${now.month.toString().padLeft(2, '0')}';
     
@@ -144,14 +150,14 @@ class BackupService {
 
     // Upload Registry
     await _supabase.storage.from(_bucketName).uploadBinary(
-      '$_registryPath/$installId.json',
+      'business_accounts/$bizId/$_registryPath/$installId.json',
       Uint8List.fromList(utf8.encode(jsonEncode(registryEntry.toJson()))),
       fileOptions: const FileOptions(cacheControl: '3600', upsert: true, contentType: 'application/json'),
     );
 
     // Upload Summary
     await _supabase.storage.from(_bucketName).uploadBinary(
-      '$_summariesPath/$installId/summary_$monthStr.json',
+      'business_accounts/$bizId/$_summariesPath/$installId/summary_$monthStr.json',
       Uint8List.fromList(utf8.encode(jsonEncode(branchSummary.toJson()))),
       fileOptions: const FileOptions(cacheControl: '3600', upsert: true, contentType: 'application/json'),
     );
@@ -159,13 +165,19 @@ class BackupService {
 
   Future<Either<Failure, List<FileObject>>> listBackups() async {
     try {
+      final bizIdRes = await _settingsRepository.getBusinessAccountId();
+      if (bizIdRes.isLeft() || bizIdRes.getRight().toNullable() == null) {
+        return Left(Failure('Business Account ID not found. Please set it in Settings.'));
+      }
+      final bizId = bizIdRes.getRight().toNullable()!;
+
       final installIdRes = await _settingsRepository.getOrCreateInstallId();
       if (installIdRes.isLeft()) {
         return Left(installIdRes.fold((l) => l, (r) => throw Exception()));
       }
       final installId = installIdRes.getRight().toNullable()!;
 
-      final files = await _supabase.storage.from(_bucketName).list(path: installId);
+      final files = await _supabase.storage.from(_bucketName).list(path: 'business_accounts/$bizId/backups/$installId');
       
       // Filter only encrypted sqlite files (and old unencrypted ones if any remain)
       final backups = files.where((f) => f.name.endsWith('.sqlite.enc') || f.name.endsWith('.sqlite')).toList();
@@ -181,13 +193,19 @@ class BackupService {
 
   Future<Either<Failure, void>> restoreDatabase(String fileName) async {
     try {
+      final bizIdRes = await _settingsRepository.getBusinessAccountId();
+      if (bizIdRes.isLeft() || bizIdRes.getRight().toNullable() == null) {
+        return Left(Failure('Business Account ID not found. Please set it in Settings.'));
+      }
+      final bizId = bizIdRes.getRight().toNullable()!;
+
       final installIdRes = await _settingsRepository.getOrCreateInstallId();
       if (installIdRes.isLeft()) {
         return Left(installIdRes.fold((l) => l, (r) => throw Exception()));
       }
       final installId = installIdRes.getRight().toNullable()!;
 
-      final storagePath = '$installId/$fileName';
+      final storagePath = 'business_accounts/$bizId/backups/$installId/$fileName';
       final bytes = await _supabase.storage.from(_bucketName).download(storagePath);
       // Decrypt if it's an encrypted backup
       List<int> plainBytes;
@@ -227,9 +245,10 @@ class BackupService {
     }
   }
 
-  Future<void> _cleanupOldBackups(String installId) async {
+  Future<void> _cleanupOldBackups(String installId, String bizId) async {
     try {
-      final files = await _supabase.storage.from(_bucketName).list(path: installId);
+      final path = 'business_accounts/$bizId/backups/$installId';
+      final files = await _supabase.storage.from(_bucketName).list(path: path);
       final backups = files.where((f) => f.name.endsWith('.sqlite.enc') || f.name.endsWith('.sqlite')).toList();
       
       if (backups.isEmpty) return;
@@ -246,7 +265,7 @@ class BackupService {
           if (fileDate != null) {
             final difference = now.difference(fileDate);
             if (difference.inDays >= 7) {
-              filesToDelete.add('$installId/${file.name}');
+              filesToDelete.add('$path/${file.name}');
             }
           }
         } catch (_) {}
@@ -265,13 +284,20 @@ class BackupService {
 
   Future<Either<Failure, List<BranchRegistryEntry>>> fetchRegistry() async {
     try {
-      final files = await _supabase.storage.from(_bucketName).list(path: _registryPath);
+      final bizIdRes = await _settingsRepository.getBusinessAccountId();
+      if (bizIdRes.isLeft() || bizIdRes.getRight().toNullable() == null) {
+        return Left(Failure('Business Account ID not found. Please set it in Settings.'));
+      }
+      final bizId = bizIdRes.getRight().toNullable()!;
+
+      final path = 'business_accounts/$bizId/$_registryPath';
+      final files = await _supabase.storage.from(_bucketName).list(path: path);
       final jsonFiles = files.where((f) => f.name.endsWith('.json')).toList();
       
       List<BranchRegistryEntry> registry = [];
       for (final file in jsonFiles) {
         try {
-          final bytes = await _supabase.storage.from(_bucketName).download('$_registryPath/${file.name}');
+          final bytes = await _supabase.storage.from(_bucketName).download('$path/${file.name}');
           final jsonStr = utf8.decode(bytes);
           final map = jsonDecode(jsonStr);
           registry.add(BranchRegistryEntry.fromJson(map));
@@ -288,10 +314,16 @@ class BackupService {
 
   Future<Either<Failure, List<BranchSummary>>> fetchSummaries(String month, List<String> installIds) async {
     try {
+      final bizIdRes = await _settingsRepository.getBusinessAccountId();
+      if (bizIdRes.isLeft() || bizIdRes.getRight().toNullable() == null) {
+        return Left(Failure('Business Account ID not found. Please set it in Settings.'));
+      }
+      final bizId = bizIdRes.getRight().toNullable()!;
+
       List<BranchSummary> summaries = [];
       for (final id in installIds) {
         try {
-          final path = '$_summariesPath/$id/summary_$month.json';
+          final path = 'business_accounts/$bizId/$_summariesPath/$id/summary_$month.json';
           final bytes = await _supabase.storage.from(_bucketName).download(path);
           final jsonStr = utf8.decode(bytes);
           final map = jsonDecode(jsonStr);
