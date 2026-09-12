@@ -5,6 +5,7 @@ import 'package:pos_system/features/reports/presentation/reports_controller.dart
 import 'package:pos_system/features/reports/domain/pdf_report_generator.dart';
 import 'package:printing/printing.dart';
 import 'package:pos_system/core/theme/app_theme.dart';
+import 'package:pos_system/features/reports/presentation/combined_reports_screen.dart';
 
 class ReportsDashboardScreen extends ConsumerStatefulWidget {
   const ReportsDashboardScreen({super.key});
@@ -121,6 +122,21 @@ class _SummaryTab extends ConsumerWidget {
         return ListView(
           padding: AppThemeConstants.defaultPadding,
           children: [
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const CombinedReportsScreen()),
+                );
+              },
+              icon: const Icon(Icons.hub_outlined),
+              label: const Text('Combined Multi-Branch Report'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primaryContainer,
+                foregroundColor: theme.colorScheme.onPrimaryContainer,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
+            const SizedBox(height: AppThemeConstants.spacing16),
             _SummaryCard(
               title: 'Total Sales Revenue',
               value: 'LKR ${summary.totalSalesRevenue.toStringAsFixed(2)}',

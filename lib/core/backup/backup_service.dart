@@ -10,6 +10,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/providers/app_providers.dart';
 import 'package:pos_system/core/backup/backup_encryption_service.dart';
+import 'dart:convert';
+import 'package:pos_system/core/backup/backup_models.dart';
+import 'package:pos_system/features/reports/data/reports_repository.dart';
+import 'package:pos_system/features/reports/domain/reports_models.dart';
+import 'package:pos_system/features/settings/data/branch_repository.dart';
 import 'dart:developer' as developer;
 
 final backupServiceProvider = Provider<BackupService>((ref) {
@@ -18,6 +23,8 @@ final backupServiceProvider = Provider<BackupService>((ref) {
     ref.watch(settingsRepositoryProvider),
     ref.watch(backupEncryptionServiceProvider),
     Supabase.instance.client,
+    ref.watch(reportsRepositoryProvider),
+    ref.watch(branchRepositoryProvider),
   );
 });
 
@@ -26,10 +33,14 @@ class BackupService {
   final SettingsRepository _settingsRepository;
   final BackupEncryptionService _encryptionService;
   final SupabaseClient _supabase;
+  final ReportsRepository _reportsRepo;
+  final BranchRepository _branchRepo;
   
   static const String _bucketName = 'backups';
+  static const String _registryPath = 'branch_registry';
+  static const String _summariesPath = 'branch_summaries';
 
-  BackupService(this._db, this._settingsRepository, this._encryptionService, this._supabase);
+  BackupService(this._db, this._settingsRepository, this._encryptionService, this._supabase, this._reportsRepo, this._branchRepo);
 
   Future<Either<Failure, void>> backupDatabase() async {
     try {
@@ -67,6 +78,13 @@ class BackupService {
       
       developer.log('Backup successful: $storagePath', name: 'BackupService');
 
+      // Attempt to upload cross-branch reporting summary
+      try {
+        await _uploadReportingSummary(installId);
+      } catch (e) {
+        developer.log('Failed to upload reporting summary', name: 'BackupService', error: e);
+      }
+
       // Cleanup old backups in background (fire and forget)
       _cleanupOldBackups(installId).ignore();
 
@@ -75,6 +93,68 @@ class BackupService {
       developer.log('Backup failed', name: 'BackupService', error: e, stackTrace: st);
       return Left(Failure('Failed to backup database: $e'));
     }
+  }
+
+  Future<void> _uploadReportingSummary(String installId) async {
+    final now = DateTime.now();
+    final monthStr = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    
+    // Get Branch Name
+    String branchName = 'Unknown Branch';
+    final branchIdRes = await _settingsRepository.getCurrentBranchId();
+    if (branchIdRes.isRight() && branchIdRes.getRight().toNullable() != null) {
+      final branchId = branchIdRes.getRight().toNullable()!;
+      final branchesRes = await _branchRepo.getAllBranches();
+      if (branchesRes.isRight()) {
+        final branches = branchesRes.getRight().toNullable() ?? [];
+        try {
+          final branch = branches.firstWhere((b) => b.id == branchId);
+          branchName = branch.name;
+        } catch (_) {
+          // Keep 'Unknown Branch'
+        }
+      }
+    }
+
+    // Get current month summary
+    final startOfMonth = DateTime(now.year, now.month, 1);
+    final nextMonth = now.month == 12 ? DateTime(now.year + 1, 1, 1) : DateTime(now.year, now.month + 1, 1);
+    final endOfMonth = nextMonth.subtract(const Duration(seconds: 1));
+    
+    final summaryRes = await _reportsRepo.getDashboardSummary(DateRange(startOfMonth, endOfMonth));
+    if (summaryRes.isLeft()) return;
+    
+    final summary = summaryRes.getRight().toNullable()!;
+    
+    final branchSummary = BranchSummary(
+      installId: installId,
+      branchName: branchName,
+      month: monthStr,
+      totalSalesRevenue: summary.totalSalesRevenue,
+      totalTransactions: summary.totalTransactions,
+      totalRepairRevenue: summary.totalRepairRevenue,
+      totalTaxCollected: summary.totalTaxCollected,
+    );
+
+    final registryEntry = BranchRegistryEntry(
+      installId: installId,
+      branchName: branchName,
+      lastBackupTimestamp: now,
+    );
+
+    // Upload Registry
+    await _supabase.storage.from(_bucketName).uploadBinary(
+      '$_registryPath/$installId.json',
+      Uint8List.fromList(utf8.encode(jsonEncode(registryEntry.toJson()))),
+      fileOptions: const FileOptions(cacheControl: '3600', upsert: true, contentType: 'application/json'),
+    );
+
+    // Upload Summary
+    await _supabase.storage.from(_bucketName).uploadBinary(
+      '$_summariesPath/$installId/summary_$monthStr.json',
+      Uint8List.fromList(utf8.encode(jsonEncode(branchSummary.toJson()))),
+      fileOptions: const FileOptions(cacheControl: '3600', upsert: true, contentType: 'application/json'),
+    );
   }
 
   Future<Either<Failure, List<FileObject>>> listBackups() async {
@@ -178,6 +258,53 @@ class BackupService {
       }
     } catch (e, st) {
       developer.log('Cleanup failed', name: 'BackupService', error: e, stackTrace: st);
+    }
+  }
+
+  // ─── CROSS-BRANCH REPORTING (Phase 3) ──────────────────────────────────────
+
+  Future<Either<Failure, List<BranchRegistryEntry>>> fetchRegistry() async {
+    try {
+      final files = await _supabase.storage.from(_bucketName).list(path: _registryPath);
+      final jsonFiles = files.where((f) => f.name.endsWith('.json')).toList();
+      
+      List<BranchRegistryEntry> registry = [];
+      for (final file in jsonFiles) {
+        try {
+          final bytes = await _supabase.storage.from(_bucketName).download('$_registryPath/${file.name}');
+          final jsonStr = utf8.decode(bytes);
+          final map = jsonDecode(jsonStr);
+          registry.add(BranchRegistryEntry.fromJson(map));
+        } catch (e) {
+          developer.log('Failed to parse registry entry ${file.name}', name: 'BackupService', error: e);
+        }
+      }
+      return Right(registry);
+    } catch (e, st) {
+      developer.log('Failed to fetch registry', name: 'BackupService', error: e, stackTrace: st);
+      return Left(Failure('Failed to load branch registry: $e'));
+    }
+  }
+
+  Future<Either<Failure, List<BranchSummary>>> fetchSummaries(String month, List<String> installIds) async {
+    try {
+      List<BranchSummary> summaries = [];
+      for (final id in installIds) {
+        try {
+          final path = '$_summariesPath/$id/summary_$month.json';
+          final bytes = await _supabase.storage.from(_bucketName).download(path);
+          final jsonStr = utf8.decode(bytes);
+          final map = jsonDecode(jsonStr);
+          summaries.add(BranchSummary.fromJson(map));
+        } catch (e) {
+          developer.log('Failed to fetch/parse summary for $id ($month)', name: 'BackupService', error: e);
+          // We just skip it; it will be treated as "No data available" in UI if missing
+        }
+      }
+      return Right(summaries);
+    } catch (e, st) {
+      developer.log('Failed to fetch summaries', name: 'BackupService', error: e, stackTrace: st);
+      return Left(Failure('Failed to load branch summaries: $e'));
     }
   }
 }
