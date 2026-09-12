@@ -159,6 +159,7 @@ class _SummaryTab extends ConsumerWidget {
             ),
             const SizedBox(height: AppThemeConstants.spacing8),
             _SummaryCard(
+              key: const ValueKey('total_owed_card'),
               title: 'Total Owed to Suppliers',
               value: 'LKR ${summary.totalOwedToSuppliers.toStringAsFixed(2)}',
               icon: Icons.local_shipping_outlined,
@@ -186,7 +187,7 @@ class _SummaryCard extends StatelessWidget {
   final IconData icon;
   final Color color;
 
-  const _SummaryCard({required this.title, required this.value, required this.icon, required this.color});
+  const _SummaryCard({super.key, required this.title, required this.value, required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
