@@ -13,7 +13,7 @@ final hasAnyStaffProvider = FutureProvider<bool>((ref) async {
   );
 });
 
-final activeStaffProvider = FutureProvider<List<StaffMember>>((ref) async {
+final activeStaffProvider = FutureProvider.autoDispose<List<StaffMember>>((ref) async {
   final repo = ref.watch(authRepositoryProvider);
   final res = await repo.getActiveStaff();
   return res.fold(

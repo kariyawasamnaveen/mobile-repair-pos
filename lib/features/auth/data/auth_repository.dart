@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter/foundation.dart';
 import 'package:pos_system/core/database/app_database.dart';
 import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/core/error/failure.dart';
@@ -94,7 +95,10 @@ class AuthRepository {
             ..where((t) => t.isActive.equals(true))
             ..orderBy([(t) => OrderingTerm(expression: t.name)]))
           .get();
-      return Right(result.map(_mapToDomain).toList());
+      
+      final domainList = result.map(_mapToDomain).toList();
+      debugPrint('DEBUG [getActiveStaff]: Found ${domainList.length} active staff members: ${domainList.map((e) => e.name).join(", ")}');
+      return Right(domainList);
     } catch (e, st) {
       return Left(Failure('Failed to fetch active staff', error: e, stackTrace: st));
     }
