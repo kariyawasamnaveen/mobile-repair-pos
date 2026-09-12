@@ -32,6 +32,7 @@ class Items extends Table {
   IntColumn get reorderLevel => integer().withDefault(const Constant(5))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get branchId => text().references(Branches, #id).nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -50,6 +51,7 @@ class StockMovements extends Table {
   IntColumn get changeAmount => integer()();
   TextColumn get reason => textEnum<MovementReason>()();
   DateTimeColumn get timestamp => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get branchId => text().references(Branches, #id).nullable()();
 }
 
 @DataClassName('ItemImeiEntity')
@@ -78,6 +80,7 @@ class Sales extends Table {
   RealColumn get changeDue => real().nullable()();
   TextColumn get cashierName => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get branchId => text().references(Branches, #id).nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -110,6 +113,7 @@ class RepairJobs extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get statusUpdatedAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get deliveredAt => dateTime().nullable()();
+  TextColumn get branchId => text().references(Branches, #id).nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -185,6 +189,7 @@ class ActivityLogs extends Table {
   TextColumn get actionType => textEnum<ActivityActionType>()();
   TextColumn get description => text()();
   DateTimeColumn get timestamp => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get branchId => text().references(Branches, #id).nullable()();
 }
 
 @DataClassName('SupplierEntity')
@@ -214,6 +219,7 @@ class PurchaseOrders extends Table {
   RealColumn get balanceDue => real().withDefault(const Constant(0.0))();
   TextColumn get notes => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get branchId => text().references(Branches, #id).nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

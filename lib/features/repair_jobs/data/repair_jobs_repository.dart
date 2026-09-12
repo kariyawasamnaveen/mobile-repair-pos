@@ -25,6 +25,7 @@ final repairJobsRepositoryProvider = Provider<RepairJobsRepository>((ref) {
     ref.watch(databaseProvider),
     ref.watch(repairNotifierProvider),
     ref.watch(activityLogRepositoryProvider),
+    ref.watch(settingsRepositoryProvider),
   );
 });
 
@@ -32,9 +33,10 @@ class RepairJobsRepository {
   final AppDatabase _db;
   final RepairNotifier _notifier;
   final ActivityLogRepository _activityLogRepo;
+  final SettingsRepository _settings;
   final _uuid = const Uuid();
 
-  RepairJobsRepository(this._db, this._notifier, this._activityLogRepo);
+  RepairJobsRepository(this._db, this._notifier, this._activityLogRepo, this._settings);
 
   Future<Either<Failure, RepairJob>> createRepairJob({
     required String customerName,
@@ -49,6 +51,9 @@ class RepairJobsRepository {
     try {
       final jobId = _uuid.v4();
       final now = DateTime.now();
+
+      final currentBranchRes = await _settings.getCurrentBranchId();
+      final currentBranchId = currentBranchRes.isRight() ? currentBranchRes.getRight().toNullable() : null;
 
       return await _db.transaction(() async {
         // Generate RJ-xxxx number
@@ -71,6 +76,7 @@ class RepairJobsRepository {
                 estimatedCost: Value(estimatedCost),
                 createdAt: Value(now),
                 statusUpdatedAt: Value(now),
+                branchId: currentBranchId == null ? const Value.absent() : Value(currentBranchId),
               ),
             );
 
@@ -87,6 +93,7 @@ class RepairJobsRepository {
           staffId: staffId,
           actionType: ActivityActionType.repair_status_changed,
           description: 'Created repair job $jobNumber for $customerName',
+          branchId: currentBranchId,
         );
 
         return await getRepairJobById(jobId);
@@ -165,6 +172,7 @@ class RepairJobsRepository {
         deliveredAt: jobRow.deliveredAt,
         history: history,
         partsUsed: parts,
+        branchId: jobRow.branchId,
       ));
     } catch (e, st) {
       return Left(Failure('Failed to load repair job $id', error: e, stackTrace: st));
@@ -214,10 +222,15 @@ class RepairJobsRepository {
               );
           shouldNotify = true;
           
+          // For update, just use current branch id since the device making the update is this one.
+          final currentBranchRes = await _settings.getCurrentBranchId();
+          final currentBranchId = currentBranchRes.isRight() ? currentBranchRes.getRight().toNullable() : null;
+
           await _activityLogRepo.logAction(
             staffId: staffId,
             actionType: ActivityActionType.repair_status_changed,
-            description: 'Updated repair job $id status to ${newStatus.name}',
+            description: 'Updated repair job ${currentJob.jobNumber} status to ${newStatus.name}',
+            branchId: currentBranchId,
           );
         }
 

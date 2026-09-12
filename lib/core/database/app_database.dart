@@ -19,7 +19,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration {
@@ -114,6 +114,14 @@ class AppDatabase extends _$AppDatabase {
           if (!existingTables.contains('branches')) {
             await m.createTable(branches);
           }
+        }
+        if (from < 12) {
+          try { await m.addColumn(items, items.branchId); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
+          try { await m.addColumn(stockMovements, stockMovements.branchId); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
+          try { await m.addColumn(sales, sales.branchId); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
+          try { await m.addColumn(repairJobs, repairJobs.branchId); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
+          try { await m.addColumn(activityLogs, activityLogs.branchId); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
+          try { await m.addColumn(purchaseOrders, purchaseOrders.branchId); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
         }
       },
       beforeOpen: (details) async {

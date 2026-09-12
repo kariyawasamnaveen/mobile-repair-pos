@@ -9,20 +9,23 @@ import 'package:pos_system/features/inventory/domain/item.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/providers/app_providers.dart';
 import 'package:pos_system/features/auth/data/activity_log_repository.dart';
+import 'package:pos_system/features/settings/data/settings_repository.dart';
 
 final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) {
   return InventoryRepository(
     ref.watch(databaseProvider),
     ref.watch(activityLogRepositoryProvider),
+    ref.watch(settingsRepositoryProvider),
   );
 });
 
 class InventoryRepository {
   final AppDatabase _db;
   final ActivityLogRepository _activityLogRepo;
+  final SettingsRepository _settings;
   final _uuid = const Uuid();
 
-  InventoryRepository(this._db, this._activityLogRepo);
+  InventoryRepository(this._db, this._activityLogRepo, this._settings);
 
   Future<Either<Failure, String>> _generateInternalCode() async {
     try {
@@ -51,7 +54,14 @@ class InventoryRepository {
     ItemCategory? category,
   }) async {
     try {
+      final currentBranchRes = await _settings.getCurrentBranchId();
+      final currentBranchId = currentBranchRes.isRight() ? currentBranchRes.getRight().toNullable() : null;
+
       var query = _db.select(_db.items);
+
+      if (currentBranchId != null) {
+        query.where((t) => t.branchId.isNull() | t.branchId.equals(currentBranchId));
+      }
 
       if (search != null && search.isNotEmpty) {
         query.where((t) =>
@@ -102,6 +112,7 @@ class InventoryRepository {
           quantity: actualQuantity,
           reorderLevel: row.reorderLevel,
           imeis: imeis,
+          branchId: row.branchId,
         ));
       }
 
@@ -124,6 +135,9 @@ class InventoryRepository {
       final isPhone = item.category == ItemCategory.phone;
       final quantity = isPhone ? item.imeis.length : item.quantity;
 
+      final currentBranchRes = await _settings.getCurrentBranchId();
+      final currentBranchId = currentBranchRes.isRight() ? currentBranchRes.getRight().toNullable() : null;
+
       await _db.transaction(() async {
         await _db.into(_db.items).insert(
               ItemsCompanion(
@@ -136,6 +150,7 @@ class InventoryRepository {
                 sellingPrice: Value(item.sellingPrice),
                 quantity: Value(quantity),
                 reorderLevel: Value(item.reorderLevel),
+                branchId: currentBranchId == null ? const Value.absent() : Value(currentBranchId),
               ),
             );
 
@@ -145,6 +160,7 @@ class InventoryRepository {
                   itemId: Value(itemId),
                   changeAmount: Value(quantity),
                   reason: Value(reason),
+                  branchId: currentBranchId == null ? const Value.absent() : Value(currentBranchId),
                 ),
               );
         }
@@ -165,6 +181,7 @@ class InventoryRepository {
         staffId: staffId,
         actionType: ActivityActionType.stock_adjusted,
         description: 'Added new item: ${item.name} ($internalCode)',
+        branchId: currentBranchId,
       );
 
       return Right(Item(
@@ -178,6 +195,7 @@ class InventoryRepository {
         quantity: quantity,
         reorderLevel: item.reorderLevel,
         imeis: item.imeis,
+        branchId: currentBranchId,
       ));
     } catch (e, st) {
       return Left(Failure('Failed to add item', error: e, stackTrace: st));
@@ -210,11 +228,15 @@ class InventoryRepository {
         );
 
         if (finalChangeAmount != 0) {
+          final currentBranchRes = await _settings.getCurrentBranchId();
+          final currentBranchId = currentBranchRes.isRight() ? currentBranchRes.getRight().toNullable() : null;
+
           await _db.into(_db.stockMovements).insert(
                 StockMovementsCompanion(
                   itemId: Value(itemId),
                   changeAmount: Value(finalChangeAmount),
                   reason: Value(reason),
+                  branchId: currentBranchId == null ? const Value.absent() : Value(currentBranchId),
                 ),
               );
         }
@@ -230,10 +252,13 @@ class InventoryRepository {
       });
 
       if (changeAmount != 0) {
+        final currentBranchRes = await _settings.getCurrentBranchId();
+        final currentBranchId = currentBranchRes.isRight() ? currentBranchRes.getRight().toNullable() : null;
         await _activityLogRepo.logAction(
           staffId: staffId,
           actionType: ActivityActionType.stock_adjusted,
           description: 'Adjusted stock for item $itemId by $changeAmount (Reason: ${reason.name})',
+          branchId: currentBranchId,
         );
       }
 

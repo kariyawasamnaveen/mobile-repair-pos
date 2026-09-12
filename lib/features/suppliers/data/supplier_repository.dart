@@ -10,10 +10,13 @@ import 'package:pos_system/features/suppliers/domain/supplier.dart';
 import 'package:pos_system/providers/app_providers.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:pos_system/features/settings/data/settings_repository.dart';
+
 final supplierRepositoryProvider = Provider<SupplierRepository>((ref) {
   return SupplierRepository(
     ref.watch(databaseProvider),
     ref.watch(activityLogRepositoryProvider),
+    ref.watch(settingsRepositoryProvider),
     ref.watch(authStateProvider)?.id,
   );
 });
@@ -21,10 +24,11 @@ final supplierRepositoryProvider = Provider<SupplierRepository>((ref) {
 class SupplierRepository {
   final AppDatabase _db;
   final ActivityLogRepository _activityLogRepository;
+  final SettingsRepository _settings;
   final String? _currentStaffId;
   final _uuid = const Uuid();
 
-  SupplierRepository(this._db, this._activityLogRepository, this._currentStaffId);
+  SupplierRepository(this._db, this._activityLogRepository, this._settings, this._currentStaffId);
 
   // ─── Suppliers ─────────────────────────────────────────────────────────────
 
@@ -114,6 +118,9 @@ class SupplierRepository {
 
   Future<Either<Failure, String>> createPurchaseOrder(PurchaseOrder po, List<PurchaseOrderItem> items) async {
     try {
+      final currentBranchRes = await _settings.getCurrentBranchId();
+      final currentBranchId = currentBranchRes.isRight() ? currentBranchRes.getRight().toNullable() : null;
+
       return await _db.transaction(() async {
         await _db.into(_db.purchaseOrders).insert(
           PurchaseOrdersCompanion.insert(
@@ -127,6 +134,7 @@ class SupplierRepository {
             amountPaid: const Value(0.0),
             balanceDue: Value(po.totalAmount),
             notes: Value(po.notes),
+            branchId: currentBranchId == null ? const Value.absent() : Value(currentBranchId),
           )
         );
 
@@ -148,6 +156,7 @@ class SupplierRepository {
           actionType: ActivityActionType.po_created,
           description: 'Created PO ${po.poNumber} for ${po.totalAmount}',
           staffId: _currentStaffId,
+          branchId: currentBranchId,
         );
 
         return Right(po.id);
@@ -290,10 +299,14 @@ class SupplierRepository {
             PurchaseOrdersCompanion(status: Value(newStatus))
           );
 
+          final currentBranchRes = await _settings.getCurrentBranchId();
+          final currentBranchId = currentBranchRes.isRight() ? currentBranchRes.getRight().toNullable() : null;
+
           await _activityLogRepository.logAction(
             actionType: ActivityActionType.po_received,
             description: 'Received items for PO ${poE.poNumber} ($newStatus)',
             staffId: _currentStaffId,
+            branchId: currentBranchId,
           );
         }
 
@@ -376,10 +389,14 @@ class SupplierRepository {
         );
 
         // 5. Activity Log
+        final currentBranchRes = await _settings.getCurrentBranchId();
+        final currentBranchId = currentBranchRes.isRight() ? currentBranchRes.getRight().toNullable() : null;
+
         await _activityLogRepository.logAction(
           actionType: ActivityActionType.supplier_payment,
           description: 'Recorded payment of $amount to supplier $supplierId',
           staffId: _currentStaffId,
+          branchId: currentBranchId,
         );
 
         return const Right(null);

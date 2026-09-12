@@ -43,10 +43,14 @@ class SettingsRepository {
 
       // Only log user-facing setting changes, not system stuff like install_id or last_backup
       if (!['install_id', 'last_backup_time', 'supabase_last_sync_timestamp'].contains(key)) {
+        final currentBranchRes = await getCurrentBranchId();
+        final currentBranchId = currentBranchRes.isRight() ? currentBranchRes.getRight().toNullable() : null;
+
         await _activityLogRepo.logAction(
           staffId: staffId,
           actionType: ActivityActionType.settings_changed,
           description: 'Updated setting: $key',
+          branchId: currentBranchId,
         );
       }
 

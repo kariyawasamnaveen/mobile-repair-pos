@@ -50,6 +50,7 @@ class RepairJob {
   final DateTime? deliveredAt;
   final List<RepairStatusHistoryEntry> history;
   final List<RepairJobPart> partsUsed;
+  final String? branchId;
 
   const RepairJob({
     required this.id,
@@ -69,5 +70,6 @@ class RepairJob {
     this.deliveredAt,
     required this.history,
     required this.partsUsed,
+    this.branchId,
   });
 }

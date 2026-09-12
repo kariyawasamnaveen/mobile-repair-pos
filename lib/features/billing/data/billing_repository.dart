@@ -11,19 +11,23 @@ import 'package:pos_system/providers/app_providers.dart';
 
 import 'package:pos_system/features/auth/data/activity_log_repository.dart';
 
+import 'package:pos_system/features/settings/data/settings_repository.dart';
+
 final billingRepositoryProvider = Provider<BillingRepository>((ref) {
   return BillingRepository(
     ref.watch(databaseProvider),
     ref.watch(activityLogRepositoryProvider),
+    ref.watch(settingsRepositoryProvider),
   );
 });
 
 class BillingRepository {
   final AppDatabase _db;
   final ActivityLogRepository _activityLogRepo;
+  final SettingsRepository _settings;
   final _uuid = const Uuid();
 
-  BillingRepository(this._db, this._activityLogRepo);
+  BillingRepository(this._db, this._activityLogRepo, this._settings);
 
   Future<Either<Failure, Sale>> processSale({
     required List<CartItem> cart,
@@ -46,6 +50,9 @@ class BillingRepository {
     try {
       final saleId = _uuid.v4();
       final now = DateTime.now();
+      
+      final currentBranchRes = await _settings.getCurrentBranchId();
+      final currentBranchId = currentBranchRes.isRight() ? currentBranchRes.getRight().toNullable() : null;
 
       final saleItemsList = <SaleItem>[];
 
@@ -69,6 +76,7 @@ class BillingRepository {
                 changeDue: Value(changeDue),
                 cashierName: Value(cashierName),
                 createdAt: Value(now),
+                branchId: currentBranchId == null ? const Value.absent() : Value(currentBranchId),
               ),
             );
 
@@ -111,6 +119,7 @@ class BillingRepository {
                     saleId: Value(saleId),
                     changeAmount: -cartItem.selectedImeis.length,
                     reason: MovementReason.sale,
+                    branchId: currentBranchId == null ? const Value.absent() : Value(currentBranchId),
                   ),
                 );
 
@@ -136,6 +145,7 @@ class BillingRepository {
                     saleId: Value(saleId),
                     changeAmount: -cartItem.quantity,
                     reason: MovementReason.sale,
+                    branchId: currentBranchId == null ? const Value.absent() : Value(currentBranchId),
                   ),
                 );
 
@@ -153,6 +163,7 @@ class BillingRepository {
         staffId: staffId,
         actionType: ActivityActionType.sale_created,
         description: 'Completed sale of LKR $total (${paymentMethod.name})',
+        branchId: currentBranchId,
       );
 
       return Right(Sale(
@@ -172,6 +183,7 @@ class BillingRepository {
         changeDue: changeDue,
         cashierName: cashierName,
         createdAt: now,
+        branchId: currentBranchId,
         items: saleItemsList,
       ));
     } catch (e, st) {
@@ -232,6 +244,7 @@ class BillingRepository {
           changeDue: row.changeDue,
           cashierName: row.cashierName,
           createdAt: row.createdAt,
+          branchId: row.branchId,
           items: saleItems,
         ));
       }

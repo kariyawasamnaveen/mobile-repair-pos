@@ -11,6 +11,7 @@ class Item {
   final int quantity;
   final int reorderLevel;
   final List<String> imeis;
+  final String? branchId;
 
   const Item({
     required this.id,
@@ -23,5 +24,6 @@ class Item {
     required this.quantity,
     required this.reorderLevel,
     this.imeis = const [],
+    this.branchId,
   });
 }

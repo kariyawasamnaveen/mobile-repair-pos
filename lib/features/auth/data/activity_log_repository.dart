@@ -14,6 +14,7 @@ class ActivityLog {
   final ActivityActionType actionType;
   final String description;
   final DateTime timestamp;
+  final String? branchId;
 
   ActivityLog({
     required this.id,
@@ -22,6 +23,7 @@ class ActivityLog {
     required this.actionType,
     required this.description,
     required this.timestamp,
+    this.branchId,
   });
 }
 
@@ -39,12 +41,14 @@ class ActivityLogRepository {
     required String? staffId,
     required ActivityActionType actionType,
     required String description,
+    String? branchId,
   }) async {
     try {
       final entry = ActivityLogsCompanion.insert(
         staffId: staffId == null ? const drift.Value.absent() : drift.Value(staffId),
         actionType: actionType,
         description: description,
+        branchId: branchId == null ? const drift.Value.absent() : drift.Value(branchId),
       );
       await _db.into(_db.activityLogs).insert(entry);
     } catch (e) {
@@ -88,6 +92,7 @@ class ActivityLogRepository {
           actionType: log.actionType,
           description: log.description,
           timestamp: log.timestamp,
+          branchId: log.branchId,
         );
       }).toList();
 

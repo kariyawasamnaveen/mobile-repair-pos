@@ -34,6 +34,7 @@ class Sale {
   final String? cashierName;
   final DateTime createdAt;
   final List<SaleItem> items;
+  final String? branchId;
 
   const Sale({
     required this.id,
@@ -53,5 +54,6 @@ class Sale {
     this.cashierName,
     required this.createdAt,
     required this.items,
+    this.branchId,
   });
 }

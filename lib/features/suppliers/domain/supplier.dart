@@ -45,6 +45,7 @@ class PurchaseOrder {
   final DateTime createdAt;
   final List<PurchaseOrderItem> items;
   final Supplier? supplier; // To hold resolved supplier if needed
+  final String? branchId;
 
   const PurchaseOrder({
     required this.id,
@@ -60,6 +61,7 @@ class PurchaseOrder {
     required this.createdAt,
     this.items = const [],
     this.supplier,
+    this.branchId,
   });
 
   factory PurchaseOrder.fromEntity(PurchaseOrderEntity e, {List<PurchaseOrderItem> items = const [], Supplier? supplier}) => PurchaseOrder(
@@ -76,6 +78,7 @@ class PurchaseOrder {
     createdAt: e.createdAt,
     items: items,
     supplier: supplier,
+    branchId: e.branchId,
   );
 
   PurchaseOrder copyWith({
@@ -92,6 +95,7 @@ class PurchaseOrder {
     DateTime? createdAt,
     List<PurchaseOrderItem>? items,
     Supplier? supplier,
+    String? branchId,
   }) {
     return PurchaseOrder(
       id: id ?? this.id,
@@ -107,6 +111,7 @@ class PurchaseOrder {
       createdAt: createdAt ?? this.createdAt,
       items: items ?? this.items,
       supplier: supplier ?? this.supplier,
+      branchId: branchId ?? this.branchId,
     );
   }
 }
