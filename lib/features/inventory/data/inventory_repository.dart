@@ -1,5 +1,6 @@
 import 'package:csv/csv.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:uuid/uuid.dart';
 import 'package:pos_system/core/database/app_database.dart';
@@ -136,7 +137,10 @@ class InventoryRepository {
       final quantity = isPhone ? item.imeis.length : item.quantity;
 
       final currentBranchRes = await _settings.getCurrentBranchId();
-      final currentBranchId = currentBranchRes.isRight() ? currentBranchRes.getRight().toNullable() : null;
+      String? currentBranchId = currentBranchRes.isRight() ? currentBranchRes.getRight().toNullable() : null;
+      if (currentBranchId != null && currentBranchId.trim().isEmpty) {
+        currentBranchId = null;
+      }
 
       await _db.transaction(() async {
         await _db.into(_db.items).insert(
@@ -198,6 +202,8 @@ class InventoryRepository {
         branchId: currentBranchId,
       ));
     } catch (e, st) {
+      debugPrint('Error in addItem: $e');
+      debugPrint('Stacktrace: $st');
       return Left(Failure('Failed to add item', error: e, stackTrace: st));
     }
   }
