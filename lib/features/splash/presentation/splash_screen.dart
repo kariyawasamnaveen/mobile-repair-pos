@@ -106,34 +106,62 @@ class _SplashLogoWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Composed icon using simple Flutter widgets to avoid CustomPainter overhead
-    return const SizedBox(
-      width: 120,
-      height: 120,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Shop awning base
-          Positioned(
-            bottom: 20,
-            child: Icon(
-              Icons.storefront_rounded,
-              size: 100,
-              color: Colors.white,
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 140,
+          height: 140,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Shop awning base
+              const Positioned(
+                bottom: 20,
+                child: Icon(
+                  Icons.storefront_rounded,
+                  size: 110,
+                  color: Colors.white,
+                ),
+              ),
+              // Chart / upward trend element overlapping
+              Positioned(
+                right: 10,
+                top: 20,
+                child: Stack(
+                  children: [
+                    const Icon(
+                      Icons.bar_chart_rounded,
+                      size: 70,
+                      color: Color(0xFFF59E0B),
+                    ),
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: const Icon(
+                        Icons.arrow_outward_rounded,
+                        size: 32,
+                        color: Color(0xFFF59E0B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          // Chart / upward trend element overlapping
-          Positioned(
-            right: 0,
-            top: 20,
-            child: Icon(
-              Icons.trending_up_rounded,
-              size: 64,
-              color: Colors.white,
-            ),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'ShopSense',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
