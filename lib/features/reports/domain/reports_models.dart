@@ -15,6 +15,7 @@ class DashboardSummary {
   final double outstandingCredit; // snapshot
   final double totalOwedToSuppliers;
   final int lowStockItemsCount; // snapshot
+  final double totalDiscounts; // new field
   
   const DashboardSummary({
     required this.totalSalesRevenue,
@@ -24,6 +25,7 @@ class DashboardSummary {
     required this.outstandingCredit,
     required this.totalOwedToSuppliers,
     required this.lowStockItemsCount,
+    required this.totalDiscounts,
   });
 }
 

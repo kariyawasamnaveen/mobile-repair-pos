@@ -1,7 +1,10 @@
 
+import 'package:pos_system/core/database/tables.dart' show ItemCategory;
+
 class CartItem {
   final String itemId;
   final String itemName;
+  final ItemCategory? category;
   final String? barcode;
   final double unitPrice;
   final int maxQuantity;
@@ -13,6 +16,7 @@ class CartItem {
   CartItem({
     required this.itemId,
     required this.itemName,
+    this.category,
     this.barcode,
     required this.unitPrice,
     required this.maxQuantity,
@@ -30,6 +34,7 @@ class CartItem {
     return CartItem(
       itemId: itemId,
       itemName: itemName,
+      category: category,
       barcode: barcode,
       unitPrice: unitPrice,
       maxQuantity: maxQuantity,

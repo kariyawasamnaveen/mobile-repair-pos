@@ -11,6 +11,10 @@ import 'package:pos_system/features/inventory/presentation/inventory_controller.
 import 'package:pos_system/features/auth/presentation/auth_controller.dart';
 import 'package:pos_system/features/settings/presentation/settings_controller.dart';
 
+import 'package:pos_system/features/discount/presentation/discount_controller.dart';
+import 'package:pos_system/features/discount/domain/discount_calculator.dart';
+import 'package:pos_system/features/discount/domain/discount_rule.dart';
+
 final cartProvider = StateNotifierProvider<CartNotifier, List<CartItem>>((ref) {
   return CartNotifier();
 });
@@ -56,7 +60,8 @@ class CartNotifier extends StateNotifier<List<CartItem>> {
         CartItem(
           itemId: item.id,
           itemName: item.name,
-          barcode: item.barcode,
+          category: item.category,
+          barcode: item.internalCode,
           unitPrice: item.sellingPrice,
           maxQuantity: item.quantity,
           isSerialized: isSerialized,
@@ -116,6 +121,20 @@ class CartNotifier extends StateNotifier<List<CartItem>> {
 }
 
 final discountProvider = StateProvider<double>((ref) => 0.0);
+final appliedDiscountRuleNameProvider = StateProvider<String?>((ref) => null);
+
+final applicableDiscountRulesProvider = Provider<List<DiscountRule>>((ref) {
+  final activeRulesAsync = ref.watch(activeDiscountRulesProvider);
+  final activeRules = activeRulesAsync.valueOrNull ?? [];
+  final cart = ref.watch(cartProvider);
+  final subtotal = ref.watch(cartProvider.notifier).subtotal;
+  
+  return DiscountCalculator.getApplicableRules(
+    activeRules: activeRules,
+    cart: cart,
+    subtotal: subtotal,
+  );
+});
 
 final checkoutControllerProvider = Provider<CheckoutController>((ref) {
   return CheckoutController(ref);
@@ -139,6 +158,7 @@ class CheckoutController {
 
     final subtotal = _ref.read(cartProvider.notifier).subtotal;
     final discount = _ref.read(discountProvider);
+    final appliedDiscountRuleName = _ref.read(appliedDiscountRuleNameProvider);
     
     final settings = _ref.read(storeSettingsProvider).valueOrNull;
     final isTaxEnabled = settings?.isTaxEnabled ?? false;
@@ -189,6 +209,7 @@ class CheckoutController {
       amountTendered: paymentMethod == PaymentMethod.cash ? amountTendered : null,
       changeDue: changeDue,
       cashierName: cashierName,
+      appliedDiscountRuleName: appliedDiscountRuleName,
       staffId: _ref.read(authStateProvider)?.id,
     );
 
@@ -197,6 +218,7 @@ class CheckoutController {
       (sale) {
         _ref.read(cartProvider.notifier).clear();
         _ref.read(discountProvider.notifier).state = 0.0;
+        _ref.read(appliedDiscountRuleNameProvider.notifier).state = null;
         _ref.read(inventoryControllerProvider.notifier).loadItems();
         return Right(sale);
       },

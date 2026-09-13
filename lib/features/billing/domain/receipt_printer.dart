@@ -28,7 +28,13 @@ class LoggingReceiptPrinter implements ReceiptPrinter {
     }
     buffer.writeln('----------------');
     buffer.writeln('Subtotal: ${sale.subtotal}');
-    buffer.writeln('Discount: ${sale.discount}');
+    if (sale.discount > 0) {
+      if (sale.appliedDiscountRuleName != null && sale.appliedDiscountRuleName!.isNotEmpty) {
+        buffer.writeln('Discount (${sale.appliedDiscountRuleName}): -${sale.discount}');
+      } else {
+        buffer.writeln('Discount: -${sale.discount}');
+      }
+    }
     buffer.writeln('Total: ${sale.total}');
     buffer.writeln('Payment: ${sale.paymentMethod.name}');
     if (sale.paymentMethod == PaymentMethod.cash && sale.amountTendered != null) {

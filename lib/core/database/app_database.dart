@@ -14,12 +14,13 @@ part 'app_database.g.dart';
   PurchaseOrderItems,
   SupplierPayments,
   Branches,
+  DiscountRules,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration {
@@ -122,6 +123,14 @@ class AppDatabase extends _$AppDatabase {
           try { await m.addColumn(repairJobs, repairJobs.branchId); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
           try { await m.addColumn(activityLogs, activityLogs.branchId); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
           try { await m.addColumn(purchaseOrders, purchaseOrders.branchId); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
+        }
+        if (from < 13) {
+          final existingTablesResult = await m.database.customSelect("SELECT name FROM sqlite_master WHERE type='table'").get();
+          final existingTables = existingTablesResult.map((row) => row.read<String>('name')).toSet();
+          if (!existingTables.contains('discount_rules')) {
+            await m.createTable(discountRules);
+          }
+          try { await m.addColumn(sales, sales.appliedDiscountRuleName); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
         }
       },
       beforeOpen: (details) async {

@@ -164,6 +164,13 @@ class _SummaryTab extends ConsumerWidget {
               icon: Icons.account_balance,
               color: theme.colorScheme.tertiary,
             ),
+            const SizedBox(height: AppThemeConstants.spacing8),
+            _SummaryCard(
+              title: 'Total Discounts Given',
+              value: 'LKR ${summary.totalDiscounts.toStringAsFixed(2)}',
+              icon: Icons.local_offer_outlined,
+              color: theme.colorScheme.error,
+            ),
             const SizedBox(height: AppThemeConstants.spacing24),
             Text('Snapshots (Current)', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant)),
             const SizedBox(height: AppThemeConstants.spacing8),

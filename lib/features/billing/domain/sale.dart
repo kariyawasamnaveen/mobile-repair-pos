@@ -22,6 +22,7 @@ class Sale {
   final String? customerPhone;
   final double subtotal;
   final double discount;
+  final String? appliedDiscountRuleName;
   final double? taxAmount;
   final double? taxRateApplied;
   final double total;
@@ -42,6 +43,7 @@ class Sale {
     this.customerPhone,
     required this.subtotal,
     required this.discount,
+    this.appliedDiscountRuleName,
     this.taxAmount,
     this.taxRateApplied,
     required this.total,

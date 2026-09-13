@@ -19,6 +19,7 @@ import 'package:pos_system/core/backup/backup_encryption_service.dart';
 import 'package:pos_system/features/auth/data/activity_log_repository.dart';
 import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/core/theme/app_theme.dart';
+import 'package:pos_system/features/settings/presentation/discount_rules_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -534,6 +535,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ),
               
+              const SizedBox(height: AppThemeConstants.spacing24),
+              const Divider(),
+              Text('Pricing & Discounts', style: theme.textTheme.titleMedium),
+              const SizedBox(height: AppThemeConstants.spacing12),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.local_offer),
+                  title: const Text('Manage Discounts & Promotions'),
+                  subtitle: const Text('Create and manage automated discount rules.'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const DiscountRulesScreen()));
+                  },
+                ),
+              ),
+
               const SizedBox(height: AppThemeConstants.spacing24),
               const Divider(),
               Text('Database Backup', style: theme.textTheme.titleMedium),

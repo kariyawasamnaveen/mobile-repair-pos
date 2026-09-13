@@ -5,7 +5,24 @@ enum ItemCategory { phone, accessory, sparePart, other }
 enum MovementReason { sale, restock, adjustment, returnItem, repairUsage, purchaseReceived }
 enum PaymentMethod { cash, card, credit, qr }
 enum RepairJobStatus { received, diagnosing, awaitingCustomerApproval, inProgress, readyForPickup, delivered, cancelled }
-enum CreditPaymentMethod { cash, card, qr }
+enum CreditPaymentMethod {
+  cash,
+  card,
+  bankTransfer,
+  qr,
+}
+
+enum DiscountType {
+  percentage,
+  fixedAmount,
+}
+
+enum DiscountScope {
+  entireSale,
+  specificCategory,
+  specificItem,
+}
+
 enum PurchaseOrderStatus { draft, ordered, partiallyReceived, received, cancelled }
 enum StaffRole { owner, cashier, technician }
 enum ActivityActionType { sale_created, item_price_changed, stock_adjusted, repair_status_changed, payment_collected, settings_changed, staff_login, po_created, po_received, supplier_payment }
@@ -81,6 +98,7 @@ class Sales extends Table {
   TextColumn get cashierName => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   TextColumn get branchId => text().references(Branches, #id).nullable()();
+  TextColumn get appliedDiscountRuleName => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -246,6 +264,25 @@ class SupplierPayments extends Table {
   TextColumn get paymentMethod => textEnum<CreditPaymentMethod>()();
   DateTimeColumn get paidAt => dateTime().withDefault(currentDateAndTime)();
   TextColumn get notes => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('DiscountRuleEntity')
+class DiscountRules extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get type => textEnum<DiscountType>()();
+  RealColumn get value => real()();
+  TextColumn get scope => textEnum<DiscountScope>()();
+  TextColumn get scopeReference => text().nullable()();
+  RealColumn get minPurchaseAmount => real().nullable()();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get startDate => dateTime().nullable()();
+  DateTimeColumn get endDate => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get branchId => text().references(Branches, #id).nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

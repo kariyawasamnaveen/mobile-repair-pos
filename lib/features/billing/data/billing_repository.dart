@@ -45,6 +45,7 @@ class BillingRepository {
     double? amountTendered,
     double? changeDue,
     String? cashierName,
+    String? appliedDiscountRuleName,
     String? staffId, // for activity logging
   }) async {
     try {
@@ -75,6 +76,7 @@ class BillingRepository {
                 amountTendered: Value(amountTendered),
                 changeDue: Value(changeDue),
                 cashierName: Value(cashierName),
+                appliedDiscountRuleName: Value(appliedDiscountRuleName),
                 createdAt: Value(now),
                 branchId: currentBranchId == null ? const Value.absent() : Value(currentBranchId),
               ),
@@ -182,6 +184,7 @@ class BillingRepository {
         amountTendered: amountTendered,
         changeDue: changeDue,
         cashierName: cashierName,
+        appliedDiscountRuleName: appliedDiscountRuleName,
         createdAt: now,
         branchId: currentBranchId,
         items: saleItemsList,
@@ -243,6 +246,7 @@ class BillingRepository {
           amountTendered: row.amountTendered,
           changeDue: row.changeDue,
           cashierName: row.cashierName,
+          appliedDiscountRuleName: row.appliedDiscountRuleName,
           createdAt: row.createdAt,
           branchId: row.branchId,
           items: saleItems,

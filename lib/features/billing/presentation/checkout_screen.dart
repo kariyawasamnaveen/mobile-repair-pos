@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/core/scanning/camera_scanner_sheet.dart';
 import 'package:pos_system/features/billing/domain/tax_calculator.dart';
+import 'package:pos_system/features/discount/domain/discount_calculator.dart';
 import 'package:pos_system/features/billing/presentation/billing_controller.dart';
 import 'package:pos_system/features/inventory/domain/item.dart';
 import 'package:pos_system/features/inventory/presentation/inventory_controller.dart';
@@ -45,6 +46,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   void _handleScan(String query) {
     _searchController.text = query;
     ref.read(inventoryControllerProvider.notifier).setSearchQuery(query);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   void _showImeiSelection(BuildContext context, Item item) {
@@ -260,15 +268,48 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
 // ── Cart Bottom Sheet ────────────────────────────────────────────────────────
 
-class CartBottomSheet extends ConsumerWidget {
+class CartBottomSheet extends ConsumerStatefulWidget {
   const CartBottomSheet({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CartBottomSheet> createState() => _CartBottomSheetState();
+}
+
+class _CartBottomSheetState extends ConsumerState<CartBottomSheet> {
+  final _discountController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize controller with current discount
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final discount = ref.read(discountProvider);
+      if (discount > 0) {
+        _discountController.text = discount.toStringAsFixed(2);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _discountController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final cart = ref.watch(cartProvider);
     final subtotal = ref.watch(cartProvider.notifier).subtotal;
     final discount = ref.watch(discountProvider);
+    final applicableRules = ref.watch(applicableDiscountRulesProvider);
+    final appliedRuleName = ref.watch(appliedDiscountRuleNameProvider);
     
+    ref.listen<double>(discountProvider, (prev, next) {
+      if (double.tryParse(_discountController.text) != next) {
+        _discountController.text = next.toStringAsFixed(2);
+      }
+    });
+
     final settings = ref.watch(storeSettingsProvider).valueOrNull;
     final isTaxEnabled = settings?.isTaxEnabled ?? false;
     final taxRate = settings?.taxRate ?? 0.0;
@@ -459,6 +500,7 @@ class CartBottomSheet extends ConsumerWidget {
                     const SizedBox(width: AppThemeConstants.spacing8),
                     Expanded(
                       child: TextField(
+                        controller: _discountController,
                         keyboardType: TextInputType.number,
                         textAlign: TextAlign.right,
                         decoration: InputDecoration(
@@ -473,11 +515,43 @@ class CartBottomSheet extends ConsumerWidget {
                         onChanged: (val) {
                           final d = double.tryParse(val) ?? 0.0;
                           ref.read(discountProvider.notifier).state = d;
+                          ref.read(appliedDiscountRuleNameProvider.notifier).state = null;
                         },
                       ),
                     ),
                   ],
                 ),
+                if (applicableRules.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: applicableRules.map((rule) {
+                      final isApplied = appliedRuleName == rule.name;
+                      return ChoiceChip(
+                        label: Text(
+                          '${rule.name} (-${rule.type == DiscountType.percentage ? '${rule.value.toStringAsFixed(0)}%' : 'LKR ${rule.value.toStringAsFixed(0)}'})',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        selected: isApplied,
+                        onSelected: (selected) {
+                          if (selected) {
+                            final discountAmt = DiscountCalculator.calculateDiscountAmount(
+                              rule: rule,
+                              cart: cart,
+                              subtotal: subtotal,
+                            );
+                            ref.read(discountProvider.notifier).state = discountAmt;
+                            ref.read(appliedDiscountRuleNameProvider.notifier).state = rule.name;
+                          } else {
+                            ref.read(discountProvider.notifier).state = 0.0;
+                            ref.read(appliedDiscountRuleNameProvider.notifier).state = null;
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
                 if (isTaxEnabled && taxAmount != null) ...[
                   const SizedBox(height: AppThemeConstants.spacing8),
                   Row(

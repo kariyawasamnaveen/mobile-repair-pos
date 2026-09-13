@@ -162,12 +162,15 @@ class PdfReportGenerator {
         color: PdfColors.grey100,
         borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
       ),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+      child: pw.Wrap(
+        alignment: pw.WrapAlignment.spaceAround,
+        spacing: 16,
+        runSpacing: 12,
         children: [
           _buildSummaryItem('Total Revenue', currency.format(dashboard.totalSalesRevenue + dashboard.totalRepairRevenue)),
           _buildSummaryItem('Transactions', dashboard.totalTransactions.toString()),
           _buildSummaryItem('Total Tax', currency.format(dashboard.totalTaxCollected)),
+          _buildSummaryItem('Total Discounts', currency.format(dashboard.totalDiscounts)),
           _buildSummaryItem('Out. Credit', currency.format(dashboard.outstandingCredit)),
           _buildSummaryItem('Owed to Suppl.', currency.format(dashboard.totalOwedToSuppliers)),
           _buildSummaryItem('Low Stock', dashboard.lowStockItemsCount.toString()),

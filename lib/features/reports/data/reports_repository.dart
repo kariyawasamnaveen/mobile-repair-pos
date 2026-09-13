@@ -19,14 +19,15 @@ class ReportsRepository {
     try {
       final vars = [Variable.withDateTime(range.start), Variable.withDateTime(range.end)];
       
-      // 1. Sales revenue, transactions, and tax
+      // 1. Sales revenue, transactions, tax, and discounts
       final salesRes = await _db.customSelect(
-        'SELECT SUM(total) as revenue, COUNT(*) as count, SUM(tax_amount) as tax FROM sales WHERE created_at >= ? AND created_at <= ?',
+        'SELECT SUM(total) as revenue, COUNT(*) as count, SUM(tax_amount) as tax, SUM(discount) as discounts FROM sales WHERE created_at >= ? AND created_at <= ?',
         variables: vars,
       ).getSingle();
       final totalSalesRevenue = salesRes.read<double?>('revenue') ?? 0.0;
       final totalTransactions = salesRes.read<int?>('count') ?? 0;
       final totalTaxCollected = salesRes.read<double?>('tax') ?? 0.0;
+      final totalDiscounts = salesRes.read<double?>('discounts') ?? 0.0;
       
       // 2. Repair jobs revenue
       final repairRes = await _db.customSelect(
@@ -62,6 +63,7 @@ class ReportsRepository {
         outstandingCredit: outstandingCredit,
         totalOwedToSuppliers: totalOwedToSuppliers,
         lowStockItemsCount: lowStockCount,
+        totalDiscounts: totalDiscounts,
       ));
     } catch (e, st) {
       return Left(Failure('Failed to load dashboard summary', error: e, stackTrace: st));
