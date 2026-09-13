@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/features/repair_jobs/presentation/repair_jobs_controller.dart';
 import 'package:pos_system/features/repair_jobs/presentation/new_repair_job_screen.dart';
+import 'package:pos_system/core/widgets/empty_state_widget.dart';
 import 'package:pos_system/features/repair_jobs/presentation/repair_job_detail_screen.dart';
 import 'package:pos_system/core/theme/app_theme.dart';
 
@@ -61,15 +62,10 @@ class _RepairJobListScreenState extends ConsumerState<RepairJobListScreen> {
           }).toList();
 
           if (filteredJobs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.build_circle_outlined, size: 64, color: theme.colorScheme.onSurfaceVariant),
-                  const SizedBox(height: AppThemeConstants.spacing16),
-                  Text('No repair jobs found.', style: theme.textTheme.titleMedium),
-                ],
-              ),
+            return const EmptyStateWidget(
+              icon: Icons.build_circle_outlined,
+              title: 'No repair jobs found',
+              subtitle: 'Create a new repair job to get started.',
             );
           }
 

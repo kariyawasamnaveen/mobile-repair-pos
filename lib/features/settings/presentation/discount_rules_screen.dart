@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/features/discount/domain/discount_rule.dart';
+import 'package:pos_system/core/widgets/empty_state_widget.dart';
 import 'package:pos_system/features/discount/presentation/discount_controller.dart';
 import 'package:pos_system/core/theme/app_theme.dart';
 
@@ -27,7 +28,11 @@ class DiscountRulesScreen extends ConsumerWidget {
         error: (err, stack) => Center(child: Text('Error: $err')),
         data: (rules) {
           if (rules.isEmpty) {
-            return const Center(child: Text('No discount rules configured.'));
+            return const EmptyStateWidget(
+              icon: Icons.local_offer_outlined,
+              title: 'No discount rules configured',
+              subtitle: 'Create your first promotion to boost sales.',
+            );
           }
           return ListView.builder(
             padding: const EdgeInsets.all(16),

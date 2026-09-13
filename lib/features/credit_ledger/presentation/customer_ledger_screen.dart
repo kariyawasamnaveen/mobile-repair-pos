@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/features/credit_ledger/domain/credit_ledger_models.dart';
+import 'package:pos_system/core/widgets/empty_state_widget.dart';
 import 'package:pos_system/features/credit_ledger/presentation/credit_ledger_controller.dart';
 import 'package:pos_system/features/credit_ledger/presentation/customer_detail_screen.dart';
 import 'package:pos_system/core/theme/app_theme.dart';
@@ -56,23 +57,18 @@ class _CustomerLedgerScreenState extends ConsumerState<CustomerLedgerScreen> {
           child: state.when(
             data: (customers) {
               if (customers.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.check_circle_outline, size: 64, color: AppTheme.successColor),
-                      const SizedBox(height: AppThemeConstants.spacing16),
-                      Text(
-                        'No outstanding balances — all settled!',
-                        style: theme.textTheme.titleMedium,
-                      ),
-                    ],
-                  ),
+                return const EmptyStateWidget(
+                  icon: Icons.check_circle_outline,
+                  title: 'No outstanding balances — all settled!',
                 );
               }
               final visible = _filtered(customers);
               if (visible.isEmpty) {
-                return Center(child: Text('No customers match your search.', style: theme.textTheme.titleMedium));
+                return const EmptyStateWidget(
+                  icon: Icons.search_off_outlined,
+                  title: 'No customers match your search.',
+                  subtitle: 'Try a different name or phone number.',
+                );
               }
               return ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing16, vertical: AppThemeConstants.spacing8),

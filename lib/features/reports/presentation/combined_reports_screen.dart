@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/core/backup/backup_models.dart';
 import 'package:pos_system/core/backup/backup_service.dart';
+import 'package:pos_system/core/theme/app_theme.dart';
+import 'package:pos_system/core/widgets/empty_state_widget.dart';
 
 final branchRegistryProvider = FutureProvider<List<BranchRegistryEntry>>((ref) async {
   final service = ref.watch(backupServiceProvider);
@@ -74,7 +76,11 @@ class _CombinedReportsScreenState extends ConsumerState<CombinedReportsScreen> {
         error: (err, _) => Center(child: Text('Failed to load branches: $err')),
         data: (registry) {
           if (registry.isEmpty) {
-            return const Center(child: Text('No branch backups found in Supabase.'));
+            return const EmptyStateWidget(
+              icon: Icons.cloud_off_outlined,
+              title: 'No branch backups found',
+              subtitle: 'Ensure your branches are backing up to Supabase.',
+            );
           }
 
           return CustomScrollView(
@@ -149,9 +155,10 @@ class _CombinedReportsScreenState extends ConsumerState<CombinedReportsScreen> {
                 data: (summaries) {
                   if (selectedBranches.isEmpty) {
                     return const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.all(32.0),
-                        child: Center(child: Text('Select at least one branch')),
+                      child: EmptyStateWidget(
+                        icon: Icons.check_box_outline_blank,
+                        title: 'No branches selected',
+                        subtitle: 'Select at least one branch above to view combined reports.',
                       ),
                     );
                   }
@@ -177,12 +184,12 @@ class _CombinedReportsScreenState extends ConsumerState<CombinedReportsScreen> {
 
                   return SliverList(
                     delegate: SliverChildListDelegate([
-                      const SizedBox(height: 24),
+                      const SizedBox(height: AppThemeConstants.spacing24),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: Text('Combined Totals', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppThemeConstants.spacing16),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: Row(
@@ -195,7 +202,7 @@ class _CombinedReportsScreenState extends ConsumerState<CombinedReportsScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: AppThemeConstants.spacing32),
                       
                       // Chart
                       if (maxSales > 0) ...[
@@ -203,7 +210,7 @@ class _CombinedReportsScreenState extends ConsumerState<CombinedReportsScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: Text('Sales Comparison', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppThemeConstants.spacing16),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: Card(
@@ -275,14 +282,14 @@ class _CombinedReportsScreenState extends ConsumerState<CombinedReportsScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: AppThemeConstants.spacing32),
                       ],
 
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: Text('Detailed Breakdown', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppThemeConstants.spacing16),
                       
                       // Breakdown table
                       SingleChildScrollView(
@@ -320,7 +327,7 @@ class _CombinedReportsScreenState extends ConsumerState<CombinedReportsScreen> {
                           }).toList(),
                         ),
                       ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: AppThemeConstants.spacing32),
                     ]),
                   );
                 },

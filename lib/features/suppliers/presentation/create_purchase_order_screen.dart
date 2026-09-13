@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/core/theme/app_theme.dart';
+import 'package:pos_system/core/widgets/empty_state_widget.dart';
 import 'package:pos_system/features/suppliers/presentation/supplier_controller.dart';
 import 'package:pos_system/features/suppliers/data/supplier_repository.dart';
 import 'package:pos_system/features/suppliers/domain/supplier.dart';
@@ -51,7 +52,11 @@ class _CreatePurchaseOrderScreenState extends ConsumerState<CreatePurchaseOrderS
                 ),
                 const SizedBox(height: 8),
                 if (_lineItems.isEmpty)
-                  const Center(child: Padding(padding: EdgeInsets.all(16), child: Text('No items added yet.')))
+                  const EmptyStateWidget(
+                    icon: Icons.list_alt_outlined,
+                    title: 'No items added yet',
+                    subtitle: 'Use the button above to add items to this order.',
+                  )
                 else
                   ..._lineItems.asMap().entries.map((e) {
                     final index = e.key;

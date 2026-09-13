@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pos_system/core/widgets/empty_state_widget.dart';
 import 'package:pos_system/core/theme/app_theme.dart';
 import 'package:pos_system/features/suppliers/presentation/supplier_controller.dart';
 import 'package:pos_system/features/suppliers/data/supplier_repository.dart';
@@ -20,7 +21,11 @@ class SupplierListScreen extends ConsumerWidget {
       body: suppliersState.when(
         data: (suppliers) {
           if (suppliers.isEmpty) {
-            return const Center(child: Text('No suppliers found.'));
+            return const EmptyStateWidget(
+              icon: Icons.local_shipping_outlined,
+              title: 'No suppliers found',
+              subtitle: 'Add a supplier to start managing purchase orders.',
+            );
           }
           return ListView.builder(
             padding: AppThemeConstants.defaultPadding,

@@ -5,6 +5,7 @@ import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/core/scanning/camera_scanner_sheet.dart';
 import 'package:pos_system/features/billing/domain/tax_calculator.dart';
 import 'package:pos_system/features/discount/domain/discount_calculator.dart';
+import 'package:pos_system/core/widgets/empty_state_widget.dart';
 import 'package:pos_system/features/billing/presentation/billing_controller.dart';
 import 'package:pos_system/features/inventory/domain/item.dart';
 import 'package:pos_system/features/inventory/presentation/inventory_controller.dart';
@@ -186,15 +187,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               child: inventoryState.when(
                 data: (items) {
                   if (items.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.inventory_2_outlined, size: 64, color: theme.colorScheme.onSurfaceVariant),
-                          const SizedBox(height: AppThemeConstants.spacing16),
-                          Text('No items found.', style: theme.textTheme.titleMedium),
-                        ],
-                      ),
+                    return const EmptyStateWidget(
+                      icon: Icons.inventory_2_outlined,
+                      title: 'No items found',
+                      subtitle: 'Try a different search term.',
                     );
                   }
                   return ListView.builder(
@@ -364,16 +360,10 @@ class _CartBottomSheetState extends ConsumerState<CartBottomSheet> {
           // Cart Items List
           Flexible(
             child: cart.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.all(AppThemeConstants.spacing32),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.remove_shopping_cart_outlined, size: 64, color: theme.colorScheme.onSurfaceVariant),
-                        const SizedBox(height: AppThemeConstants.spacing16),
-                        Text('Cart is empty', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                      ],
-                    ),
+                ? const EmptyStateWidget(
+                    icon: Icons.remove_shopping_cart_outlined,
+                    title: 'Your cart is empty',
+                    subtitle: 'Scan or search for items to add them.',
                   )
                 : ListView.builder(
                     shrinkWrap: true,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/features/settings/domain/branch_models.dart';
 import 'package:pos_system/features/settings/presentation/branch_management_controller.dart';
+import 'package:pos_system/core/widgets/empty_state_widget.dart';
 import 'package:pos_system/core/theme/app_theme.dart';
 
 class BranchManagementScreen extends ConsumerWidget {
@@ -26,15 +27,10 @@ class BranchManagementScreen extends ConsumerWidget {
       body: branchesAsync.when(
         data: (branchList) {
           if (branchList.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.storefront, size: 64, color: theme.colorScheme.onSurfaceVariant),
-                  const SizedBox(height: AppThemeConstants.spacing16),
-                  Text('No branches found.', style: theme.textTheme.titleMedium),
-                ],
-              ),
+            return const EmptyStateWidget(
+              icon: Icons.storefront_outlined,
+              title: 'No branches found',
+              subtitle: 'Add a branch to start tracking multi-store sales.',
             );
           }
           return ListView.builder(

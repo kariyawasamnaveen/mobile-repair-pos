@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:pos_system/features/inventory/data/inventory_repository.dart';
 import 'package:pos_system/features/auth/presentation/auth_controller.dart';
 import 'package:pos_system/core/theme/app_theme.dart';
+import 'package:pos_system/core/widgets/empty_state_widget.dart';
 
 class InventoryScreen extends ConsumerStatefulWidget {
   const InventoryScreen({super.key});
@@ -88,15 +89,10 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
             child: inventoryState.when(
               data: (items) {
                 if (items.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.inventory_2_outlined, size: 64, color: theme.colorScheme.onSurfaceVariant),
-                        const SizedBox(height: AppThemeConstants.spacing16),
-                        Text('No items found', style: theme.textTheme.titleMedium),
-                      ],
-                    ),
+                  return const EmptyStateWidget(
+                    icon: Icons.inventory_2_outlined,
+                    title: 'Your inventory is empty',
+                    subtitle: 'Add your first item to get started.',
                   );
                 }
                 

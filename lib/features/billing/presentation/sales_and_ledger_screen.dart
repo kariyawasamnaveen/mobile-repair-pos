@@ -4,6 +4,7 @@ import 'package:pos_system/features/billing/presentation/billing_controller.dart
 import 'package:pos_system/features/billing/presentation/receipt_screen.dart';
 import 'package:pos_system/features/credit_ledger/presentation/customer_ledger_screen.dart';
 import 'package:pos_system/core/theme/app_theme.dart';
+import 'package:pos_system/core/widgets/empty_state_widget.dart';
 
 /// Combined Sales & Ledger tab — two sub-tabs so the nav bar stays at 5 items.
 class SalesAndLedgerScreen extends StatelessWidget {
@@ -47,15 +48,10 @@ class _SalesHistoryTab extends ConsumerWidget {
     return salesState.when(
       data: (sales) {
         if (sales.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.receipt_outlined, size: 64, color: theme.colorScheme.onSurfaceVariant),
-                const SizedBox(height: AppThemeConstants.spacing16),
-                Text('No sales found.', style: theme.textTheme.titleMedium),
-              ],
-            ),
+          return const EmptyStateWidget(
+            icon: Icons.receipt_outlined,
+            title: 'No sales found',
+            subtitle: 'Try adjusting your search or date range.',
           );
         }
         return ListView.builder(

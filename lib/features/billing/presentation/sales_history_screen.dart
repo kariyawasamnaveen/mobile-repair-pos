@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pos_system/core/widgets/empty_state_widget.dart';
 import 'package:pos_system/features/billing/presentation/billing_controller.dart';
 import 'package:pos_system/features/billing/presentation/receipt_screen.dart';
 
@@ -22,7 +23,13 @@ class SalesHistoryScreen extends ConsumerWidget {
       ),
       body: salesState.when(
         data: (sales) {
-          if (sales.isEmpty) return const Center(child: Text('No sales found.'));
+          if (sales.isEmpty) {
+            return const EmptyStateWidget(
+              icon: Icons.receipt_long_outlined,
+              title: 'No sales history',
+              subtitle: 'Sales you complete will appear here.',
+            );
+          }
           
           return ListView.builder(
             itemCount: sales.length,
