@@ -52,12 +52,18 @@ class _CombinedReportsScreenState extends ConsumerState<CombinedReportsScreen> {
       }).catchError((_) {}); // Handle silently, UI will show error
     });
   }
+  
+  String _getBranchDisplayName(String name, String installId) {
+    final shortId = installId.length > 6 ? installId.substring(installId.length - 6) : installId;
+    return '$name ($shortId)';
+  }
 
   @override
   Widget build(BuildContext context) {
     final registryAsync = ref.watch(branchRegistryProvider);
     final selectedBranches = ref.watch(selectedBranchesProvider);
     final summariesAsync = ref.watch(combinedSummariesProvider(_currentMonthStr));
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -73,74 +79,81 @@ class _CombinedReportsScreenState extends ConsumerState<CombinedReportsScreen> {
 
           return CustomScrollView(
             slivers: [
+              // 1. Compact Warning Banner
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.shade300),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline, color: Colors.orange.shade800),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Combined report reflects each branch\'s last automatic backup (daily) — not real-time. '
-                            'Only summary totals are combined for the current month ($_currentMonthStr).',
-                            style: TextStyle(color: Colors.orange.shade900),
-                          ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.orange.shade800, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Showing $_currentMonthStr totals from last automatic backup (not real-time).',
+                          style: TextStyle(color: Colors.orange.shade900, fontSize: 12),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
               
-              // Branch Selection
+              // 2. Collapsible Branch Selection
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Text('Include Branches', style: Theme.of(context).textTheme.titleLarge),
-                ),
-              ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final branch = registry[index];
-                    final isSelected = selectedBranches.contains(branch.installId);
-                    
-                    return CheckboxListTile(
-                      title: Text(branch.branchName),
-                      subtitle: Text('Last backup: ${branch.lastBackupTimestamp.toString().split('.')[0]}'),
-                      value: isSelected,
-                      onChanged: (val) {
-                        final current = Set<String>.from(selectedBranches);
-                        if (val == true) {
-                          current.add(branch.installId);
-                        } else {
-                          current.remove(branch.installId);
-                        }
-                        ref.read(selectedBranchesProvider.notifier).state = current;
-                      },
-                    );
-                  },
-                  childCount: registry.length,
+                child: Theme(
+                  data: theme.copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    title: Text(
+                      '${selectedBranches.length} of ${registry.length} branches included',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: const Text('Tap to change', style: TextStyle(fontSize: 12)),
+                    children: registry.map((branch) {
+                      final isSelected = selectedBranches.contains(branch.installId);
+                      return CheckboxListTile(
+                        title: Text(_getBranchDisplayName(branch.branchName, branch.installId)),
+                        subtitle: Text('Last backup: ${branch.lastBackupTimestamp.toString().split('.')[0]}'),
+                        value: isSelected,
+                        onChanged: (val) {
+                          final current = Set<String>.from(selectedBranches);
+                          if (val == true) {
+                            current.add(branch.installId);
+                          } else {
+                            current.remove(branch.installId);
+                          }
+                          ref.read(selectedBranchesProvider.notifier).state = current;
+                        },
+                      );
+                    }).toList(),
+                  ),
                 ),
               ),
               
-              const SliverToBoxAdapter(child: Divider(height: 32)),
+              const SliverToBoxAdapter(child: Divider(height: 1)),
 
-              // Summaries
+              // 3. Summaries & Chart
               summariesAsync.when(
-                loading: () => const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator())),
-                error: (err, _) => SliverToBoxAdapter(child: Center(child: Text('Error loading summaries: $err'))),
+                loading: () => const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(32.0),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                ),
+                error: (err, _) => SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Center(child: Text('Error loading summaries: $err')),
+                  ),
+                ),
                 data: (summaries) {
                   if (selectedBranches.isEmpty) {
-                    return const SliverToBoxAdapter(child: Center(child: Text('Select at least one branch')));
+                    return const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(32.0),
+                        child: Center(child: Text('Select at least one branch')),
+                      ),
+                    );
                   }
 
                   // Aggregate totals
@@ -154,49 +167,143 @@ class _CombinedReportsScreenState extends ConsumerState<CombinedReportsScreen> {
                     totalTransactions += s.totalTransactions;
                   }
 
+                  // Find max sales for chart
+                  double maxSales = 0;
+                  for (final s in summaries) {
+                    if (s.totalSalesRevenue > maxSales) {
+                      maxSales = s.totalSalesRevenue;
+                    }
+                  }
+
                   return SliverList(
                     delegate: SliverChildListDelegate([
+                      const SizedBox(height: 24),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Text('Combined Totals', style: Theme.of(context).textTheme.titleLarge),
+                        child: Text('Combined Totals', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                       ),
                       const SizedBox(height: 16),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: Row(
                           children: [
-                            Expanded(child: _buildSummaryCard('Sales', 'LKR ${totalSales.toStringAsFixed(2)}')),
+                            Expanded(child: _buildProminentSummaryCard('Sales', 'LKR ${totalSales.toStringAsFixed(2)}', theme.colorScheme.primary)),
                             const SizedBox(width: 16),
-                            Expanded(child: _buildSummaryCard('Tax', 'LKR ${totalTax.toStringAsFixed(2)}')),
+                            Expanded(child: _buildProminentSummaryCard('Tax', 'LKR ${totalTax.toStringAsFixed(2)}', theme.colorScheme.tertiary)),
                             const SizedBox(width: 16),
-                            Expanded(child: _buildSummaryCard('Transactions', totalTransactions.toString())),
+                            Expanded(child: _buildProminentSummaryCard('Transactions', totalTransactions.toString(), theme.colorScheme.secondary)),
                           ],
                         ),
                       ),
                       const SizedBox(height: 32),
+                      
+                      // Chart
+                      if (maxSales > 0) ...[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Text('Sales Comparison', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                        ),
+                        const SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Card(
+                            elevation: 0,
+                            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: theme.colorScheme.outlineVariant)),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                children: selectedBranches.map((id) {
+                                  final summaryOpt = summaries.where((s) => s.installId == id).toList();
+                                  if (summaryOpt.isEmpty) return const SizedBox.shrink();
+                                  
+                                  final summary = summaryOpt.first;
+                                  final fraction = maxSales > 0 ? summary.totalSalesRevenue / maxSales : 0.0;
+                                  
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 12.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                _getBranchDisplayName(summary.branchName, summary.installId),
+                                                style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            Text(
+                                              'LKR ${summary.totalSalesRevenue.toStringAsFixed(2)}',
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 6),
+                                        LayoutBuilder(
+                                          builder: (context, constraints) {
+                                            return Container(
+                                              height: 12,
+                                              width: constraints.maxWidth,
+                                              decoration: BoxDecoration(
+                                                color: theme.colorScheme.surfaceContainerHighest,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Align(
+                                                alignment: Alignment.centerLeft,
+                                                child: AnimatedContainer(
+                                                  duration: const Duration(milliseconds: 500),
+                                                  curve: Curves.easeOutCubic,
+                                                  height: 12,
+                                                  width: constraints.maxWidth * fraction,
+                                                  decoration: BoxDecoration(
+                                                    color: theme.colorScheme.primary,
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                      ],
+
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Text('Branch Breakdown', style: Theme.of(context).textTheme.titleLarge),
+                        child: Text('Detailed Breakdown', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
+                      
                       // Breakdown table
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: DataTable(
                           columns: const [
-                            DataColumn(label: Text('Branch')),
-                            DataColumn(label: Text('Sales')),
-                            DataColumn(label: Text('Tax')),
-                            DataColumn(label: Text('Transactions')),
+                            DataColumn(label: Text('Branch', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Sales', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Tax', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Transactions', style: TextStyle(fontWeight: FontWeight.bold))),
                           ],
                           rows: selectedBranches.map((id) {
                             final branchReg = registry.firstWhere((r) => r.installId == id, orElse: () => BranchRegistryEntry(installId: id, branchName: 'Unknown', lastBackupTimestamp: DateTime.now()));
                             final summaryOpt = summaries.where((s) => s.installId == id).toList();
                             
+                            final displayName = _getBranchDisplayName(branchReg.branchName, id);
+                            
                             if (summaryOpt.isEmpty) {
                               return DataRow(cells: [
-                                DataCell(Text(branchReg.branchName)),
+                                DataCell(Text(displayName)),
                                 const DataCell(Text('No data available', style: TextStyle(color: Colors.grey))),
                                 const DataCell(Text('')),
                                 const DataCell(Text('')),
@@ -205,7 +312,7 @@ class _CombinedReportsScreenState extends ConsumerState<CombinedReportsScreen> {
                             
                             final summary = summaryOpt.first;
                             return DataRow(cells: [
-                              DataCell(Text(summary.branchName)),
+                              DataCell(Text(_getBranchDisplayName(summary.branchName, summary.installId))),
                               DataCell(Text('LKR ${summary.totalSalesRevenue.toStringAsFixed(2)}')),
                               DataCell(Text('LKR ${summary.totalTaxCollected.toStringAsFixed(2)}')),
                               DataCell(Text(summary.totalTransactions.toString())),
@@ -225,16 +332,39 @@ class _CombinedReportsScreenState extends ConsumerState<CombinedReportsScreen> {
     );
   }
 
-  Widget _buildSummaryCard(String title, String value) {
+  Widget _buildProminentSummaryCard(String title, String value, Color color) {
     return Card(
-      elevation: 2,
+      elevation: 3,
+      shadowColor: color.withValues(alpha: 0.2),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: color.withValues(alpha: 0.2), width: 1),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 12.0),
         child: Column(
           children: [
-            Text(title, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+            Text(
+              title, 
+              style: TextStyle(
+                fontSize: 12, 
+                fontWeight: FontWeight.w600, 
+                color: Colors.grey.shade600,
+                letterSpacing: 0.5,
+              )
+            ),
             const SizedBox(height: 8),
-            Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value, 
+                style: TextStyle(
+                  fontSize: 22, 
+                  fontWeight: FontWeight.w900,
+                  color: color,
+                )
+              ),
+            ),
           ],
         ),
       ),
