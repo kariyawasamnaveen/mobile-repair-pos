@@ -3,6 +3,8 @@ import 'package:fpdart/fpdart.dart';
 import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/features/billing/data/billing_repository.dart';
 import 'package:pos_system/features/billing/domain/cart_item.dart';
+import 'package:pos_system/features/billing/domain/tax_calculator.dart';
+import 'package:pos_system/features/billing/domain/payment_calculator.dart';
 import 'package:pos_system/features/billing/domain/sale.dart';
 import 'package:pos_system/features/inventory/domain/item.dart';
 import 'package:pos_system/features/inventory/presentation/inventory_controller.dart';
@@ -144,31 +146,31 @@ class CheckoutController {
     final isTaxInclusive = settings?.isTaxInclusive ?? false;
 
     double total = subtotal - discount;
-    double? taxAmount;
-    double? taxRateApplied;
+    final taxResult = TaxCalculator.calculate(
+      subtotal: subtotal,
+      discount: discount,
+      taxRate: taxRate,
+      isTaxEnabled: isTaxEnabled,
+      isTaxInclusive: isTaxInclusive,
+    );
 
-    if (isTaxEnabled && taxRate > 0) {
-      taxRateApplied = taxRate;
-      if (isTaxInclusive) {
-        // total = subtotal - discount
-        taxAmount = total - (total / (1 + taxRate / 100));
-      } else {
-        // Tax exclusive
-        taxAmount = total * (taxRate / 100);
-        total += taxAmount;
-      }
-    }
+    final double? taxAmount = isTaxEnabled && taxRate > 0 ? taxResult.taxAmount : null;
+    final double? taxRateApplied = isTaxEnabled && taxRate > 0 ? taxRate : null;
+    total = taxResult.total;
 
     final balanceDue = isCreditSale ? total - amountPaid : 0.0;
     
+    double? changeDue;
     if (paymentMethod == PaymentMethod.cash) {
-      if (amountTendered == null || amountTendered < total) {
-        return const Left('Amount tendered must be greater than or equal to total');
+      final paymentResult = PaymentCalculator.calculateCashChange(
+        total: total,
+        amountTendered: amountTendered,
+      );
+      if (!paymentResult.isValid) {
+        return Left(paymentResult.errorMessage!);
       }
+      changeDue = paymentResult.changeDue;
     }
-    final changeDue = (paymentMethod == PaymentMethod.cash && amountTendered != null) 
-        ? amountTendered - total 
-        : null;
 
     final repo = _ref.read(billingRepositoryProvider);
     final result = await repo.processSale(

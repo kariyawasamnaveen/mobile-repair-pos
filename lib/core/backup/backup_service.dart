@@ -10,6 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/providers/app_providers.dart';
 import 'package:pos_system/core/backup/backup_encryption_service.dart';
+import 'package:pos_system/core/backup/storage_path_builder.dart';
 import 'dart:convert';
 import 'package:pos_system/core/backup/backup_models.dart';
 import 'package:pos_system/features/reports/data/reports_repository.dart';
@@ -37,8 +38,6 @@ class BackupService {
   final BranchRepository _branchRepo;
   
   static const String _bucketName = 'backups';
-  static const String _registryPath = 'branch_registry';
-  static const String _summariesPath = 'branch_summaries';
 
   BackupService(this._db, this._settingsRepository, this._encryptionService, this._supabase, this._reportsRepo, this._branchRepo);
 
@@ -68,7 +67,7 @@ class BackupService {
 
       final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
       final fileName = 'backup_$timestamp.sqlite.enc';
-      final storagePath = 'business_accounts/$bizId/backups/$installId/$fileName';
+      final storagePath = StoragePathBuilder.buildBackupPath(bizId, installId, fileName);
 
       // Read DB file, encrypt, and upload
       final plainBytes = await dbFile.readAsBytes();
@@ -150,14 +149,14 @@ class BackupService {
 
     // Upload Registry
     await _supabase.storage.from(_bucketName).uploadBinary(
-      'business_accounts/$bizId/$_registryPath/$installId.json',
+      StoragePathBuilder.buildRegistryFilePath(bizId, installId),
       Uint8List.fromList(utf8.encode(jsonEncode(registryEntry.toJson()))),
       fileOptions: const FileOptions(cacheControl: '3600', upsert: true, contentType: 'application/json'),
     );
 
     // Upload Summary
     await _supabase.storage.from(_bucketName).uploadBinary(
-      'business_accounts/$bizId/$_summariesPath/$installId/summary_$monthStr.json',
+      StoragePathBuilder.buildSummaryFilePath(bizId, installId, monthStr),
       Uint8List.fromList(utf8.encode(jsonEncode(branchSummary.toJson()))),
       fileOptions: const FileOptions(cacheControl: '3600', upsert: true, contentType: 'application/json'),
     );
@@ -177,7 +176,7 @@ class BackupService {
       }
       final installId = installIdRes.getRight().toNullable()!;
 
-      final files = await _supabase.storage.from(_bucketName).list(path: 'business_accounts/$bizId/backups/$installId');
+      final files = await _supabase.storage.from(_bucketName).list(path: StoragePathBuilder.buildBackupDirectoryPath(bizId, installId));
       
       // Filter only encrypted sqlite files (and old unencrypted ones if any remain)
       final backups = files.where((f) => f.name.endsWith('.sqlite.enc') || f.name.endsWith('.sqlite')).toList();
@@ -205,7 +204,7 @@ class BackupService {
       }
       final installId = installIdRes.getRight().toNullable()!;
 
-      final storagePath = 'business_accounts/$bizId/backups/$installId/$fileName';
+      final storagePath = StoragePathBuilder.buildBackupPath(bizId, installId, fileName);
       final bytes = await _supabase.storage.from(_bucketName).download(storagePath);
       // Decrypt if it's an encrypted backup
       List<int> plainBytes;
@@ -247,7 +246,7 @@ class BackupService {
 
   Future<void> _cleanupOldBackups(String installId, String bizId) async {
     try {
-      final path = 'business_accounts/$bizId/backups/$installId';
+      final path = StoragePathBuilder.buildBackupDirectoryPath(bizId, installId);
       final files = await _supabase.storage.from(_bucketName).list(path: path);
       final backups = files.where((f) => f.name.endsWith('.sqlite.enc') || f.name.endsWith('.sqlite')).toList();
       
@@ -290,7 +289,7 @@ class BackupService {
       }
       final bizId = bizIdRes.getRight().toNullable()!;
 
-      final path = 'business_accounts/$bizId/$_registryPath';
+      final path = StoragePathBuilder.buildRegistryDirectoryPath(bizId);
       final files = await _supabase.storage.from(_bucketName).list(path: path);
       final jsonFiles = files.where((f) => f.name.endsWith('.json')).toList();
       
@@ -323,7 +322,7 @@ class BackupService {
       List<BranchSummary> summaries = [];
       for (final id in installIds) {
         try {
-          final path = 'business_accounts/$bizId/$_summariesPath/$id/summary_$month.json';
+          final path = StoragePathBuilder.buildSummaryFilePath(bizId, id, month);
           final bytes = await _supabase.storage.from(_bucketName).download(path);
           final jsonStr = utf8.decode(bytes);
           final map = jsonDecode(jsonStr);

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/core/scanning/camera_scanner_sheet.dart';
+import 'package:pos_system/features/billing/domain/tax_calculator.dart';
 import 'package:pos_system/features/billing/presentation/billing_controller.dart';
 import 'package:pos_system/features/inventory/domain/item.dart';
 import 'package:pos_system/features/inventory/presentation/inventory_controller.dart';
@@ -278,12 +279,15 @@ class CartBottomSheet extends ConsumerWidget {
     double? taxAmount;
 
     if (isTaxEnabled && taxRate > 0) {
-      if (isTaxInclusive) {
-        taxAmount = total - (total / (1 + taxRate / 100));
-      } else {
-        taxAmount = total * (taxRate / 100);
-        total += taxAmount;
-      }
+      final taxResult = TaxCalculator.calculate(
+        subtotal: subtotal,
+        discount: discount,
+        taxRate: taxRate,
+        isTaxEnabled: isTaxEnabled,
+        isTaxInclusive: isTaxInclusive,
+      );
+      taxAmount = taxResult.taxAmount;
+      total = taxResult.total;
     }
 
     final theme = Theme.of(context);
