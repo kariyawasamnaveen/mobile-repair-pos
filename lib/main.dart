@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pos_system/core/theme/app_theme.dart';
-import 'package:pos_system/features/auth/presentation/auth_gate.dart';
+import 'package:pos_system/features/splash/presentation/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
       title: 'POS System',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      home: const AuthGate(),
+      home: const SplashScreen(),
     );
   }
 }
