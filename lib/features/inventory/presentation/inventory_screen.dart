@@ -109,10 +109,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                         title: Text(item.name, style: theme.textTheme.titleMedium),
                         subtitle: Padding(
                           padding: const EdgeInsets.only(top: AppThemeConstants.spacing4),
-                          child: Row(
+                          child: Wrap(
+                            spacing: AppThemeConstants.spacing8,
+                            runSpacing: AppThemeConstants.spacing4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(item.internalCode, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                              const SizedBox(width: AppThemeConstants.spacing12),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing8, vertical: 2),
                                 decoration: BoxDecoration(
@@ -126,8 +128,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                   ),
                                 ),
                               ),
-                              if (ref.watch(authStateProvider)?.isOwner == true) ...[
-                                const SizedBox(width: AppThemeConstants.spacing8),
+                              if (ref.watch(authStateProvider)?.isOwner == true)
                                 Builder(
                                   builder: (context) {
                                     final profit = item.sellingPrice - item.purchasePrice;
@@ -149,7 +150,6 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                     );
                                   }
                                 ),
-                              ],
                             ],
                           ),
                         ),
