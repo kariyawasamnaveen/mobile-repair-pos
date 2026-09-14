@@ -21,20 +21,45 @@ class ReportsRepository {
       
       // 1. Sales revenue, transactions, tax, and discounts
       final salesRes = await _db.customSelect(
-        'SELECT SUM(total) as revenue, COUNT(*) as count, SUM(tax_amount) as tax, SUM(discount) as discounts FROM sales WHERE created_at >= ? AND created_at <= ?',
+        'SELECT SUM(subtotal) as subtotal_rev, SUM(total) as revenue, COUNT(*) as count, SUM(tax_amount) as tax, SUM(discount) as discounts FROM sales WHERE created_at >= ? AND created_at <= ?',
         variables: vars,
       ).getSingle();
       final totalSalesRevenue = salesRes.read<double?>('revenue') ?? 0.0;
+      final subtotalRev = salesRes.read<double?>('subtotal_rev') ?? 0.0;
       final totalTransactions = salesRes.read<int?>('count') ?? 0;
       final totalTaxCollected = salesRes.read<double?>('tax') ?? 0.0;
       final totalDiscounts = salesRes.read<double?>('discounts') ?? 0.0;
       
+      // Calculate COGS for sales
+      final salesCogsRes = await _db.customSelect('''
+        SELECT SUM(si.quantity_sold * COALESCE(si.purchase_price_at_sale, i.purchase_price)) as cogs
+        FROM sale_items si
+        JOIN sales s ON si.sale_id = s.id
+        JOIN items i ON si.item_id = i.id
+        WHERE s.created_at >= ? AND s.created_at <= ?
+      ''', variables: vars).getSingle();
+      final salesCogs = salesCogsRes.read<double?>('cogs') ?? 0.0;
+      
+      final totalSalesProfit = (subtotalRev - totalDiscounts) - salesCogs;
+
       // 2. Repair jobs revenue
       final repairRes = await _db.customSelect(
         'SELECT SUM(final_cost) as repair_revenue FROM repair_jobs WHERE status = ? AND delivered_at >= ? AND delivered_at <= ?',
         variables: [Variable.withString('delivered'), ...vars],
       ).getSingle();
       final totalRepairRevenue = repairRes.read<double?>('repair_revenue') ?? 0.0;
+      
+      // Calculate COGS for repairs
+      final repairCogsRes = await _db.customSelect('''
+        SELECT SUM(rjp.quantity_used * COALESCE(rjp.purchase_price_at_usage, i.purchase_price)) as repair_cogs
+        FROM repair_job_parts rjp
+        JOIN repair_jobs rj ON rjp.job_id = rj.id
+        JOIN items i ON rjp.item_id = i.id
+        WHERE rj.status = ? AND rj.delivered_at >= ? AND rj.delivered_at <= ?
+      ''', variables: [Variable.withString('delivered'), ...vars]).getSingle();
+      final repairCogs = repairCogsRes.read<double?>('repair_cogs') ?? 0.0;
+      
+      final totalRepairProfit = totalRepairRevenue - repairCogs;
       
       // 3. Outstanding Credit (snapshot)
       final creditRes = await _db.customSelect(
@@ -64,6 +89,8 @@ class ReportsRepository {
         totalOwedToSuppliers: totalOwedToSuppliers,
         lowStockItemsCount: lowStockCount,
         totalDiscounts: totalDiscounts,
+        totalSalesProfit: totalSalesProfit,
+        totalRepairProfit: totalRepairProfit,
       ));
     } catch (e, st) {
       return Left(Failure('Failed to load dashboard summary', error: e, stackTrace: st));
@@ -123,10 +150,28 @@ class ReportsRepository {
         totalRevenue: r.read<double>('total_rev'),
       )).toList();
       
+      // 4. Top selling items by profit
+      final topProfitRes = await _db.customSelect('''
+        SELECT i.name, SUM(si.quantity_sold * si.unit_price_at_sale) - SUM(si.quantity_sold * COALESCE(si.purchase_price_at_sale, i.purchase_price)) as total_profit
+        FROM sale_items si
+        JOIN sales s ON si.sale_id = s.id
+        JOIN items i ON si.item_id = i.id
+        WHERE s.created_at >= ? AND s.created_at <= ?
+        GROUP BY si.item_id
+        ORDER BY total_profit DESC
+        LIMIT 5
+      ''', variables: vars).get();
+      
+      final topByProfit = topProfitRes.map((r) => ItemProfit(
+        itemName: r.read<String>('name'),
+        totalProfit: r.read<double>('total_profit'),
+      )).toList();
+      
       return Right(SalesBreakdown(
         revenueByMethod: revenueByMethod,
         topSellingByQuantity: topByQty,
         topSellingByRevenue: topByRev,
+        topSellingByProfit: topByProfit,
       ));
     } catch (e, st) {
       return Left(Failure('Failed to load sales breakdown', error: e, stackTrace: st));

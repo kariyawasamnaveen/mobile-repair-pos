@@ -168,6 +168,8 @@ class PdfReportGenerator {
         runSpacing: 12,
         children: [
           _buildSummaryItem('Total Revenue', currency.format(dashboard.totalSalesRevenue + dashboard.totalRepairRevenue)),
+          _buildSummaryItem('Total Profit', '${currency.format(dashboard.totalProfit)}\n(Est.)'),
+          _buildSummaryItem('Margin', '${dashboard.profitMarginPercentage.toStringAsFixed(1)}%'),
           _buildSummaryItem('Transactions', dashboard.totalTransactions.toString()),
           _buildSummaryItem('Total Tax', currency.format(dashboard.totalTaxCollected)),
           _buildSummaryItem('Total Discounts', currency.format(dashboard.totalDiscounts)),

@@ -111,6 +111,7 @@ class SaleItems extends Table {
   TextColumn get itemId => text().references(Items, #id)();
   IntColumn get quantitySold => integer()();
   RealColumn get unitPriceAtSale => real()();
+  RealColumn get purchasePriceAtSale => real().nullable()();
   TextColumn get imeiSold => text().nullable()();
 }
 
@@ -154,6 +155,7 @@ class RepairJobParts extends Table {
   TextColumn get itemId => text().references(Items, #id)();
   IntColumn get quantityUsed => integer()();
   RealColumn get unitPrice => real()();
+  RealColumn get purchasePriceAtUsage => real().nullable()();
 }
 
 /// Records each credit payment collected from a customer.

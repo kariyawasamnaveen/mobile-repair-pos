@@ -126,6 +126,30 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                   ),
                                 ),
                               ),
+                              if (ref.watch(authStateProvider)?.isOwner == true) ...[
+                                const SizedBox(width: AppThemeConstants.spacing8),
+                                Builder(
+                                  builder: (context) {
+                                    final profit = item.sellingPrice - item.purchasePrice;
+                                    final margin = item.sellingPrice > 0 ? (profit / item.sellingPrice) * 100 : 0.0;
+                                    final isNegative = profit < 0;
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: AppThemeConstants.spacing8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: isNegative ? theme.colorScheme.errorContainer : theme.colorScheme.tertiaryContainer,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        'Margin: Rs ${profit.toStringAsFixed(0)} (${margin.toStringAsFixed(0)}%)',
+                                        style: theme.textTheme.labelSmall?.copyWith(
+                                          color: isNegative ? theme.colorScheme.error : theme.colorScheme.onTertiaryContainer,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                ),
+                              ],
                             ],
                           ),
                         ),

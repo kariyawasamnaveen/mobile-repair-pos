@@ -145,6 +145,14 @@ class _SummaryTab extends ConsumerWidget {
             ),
             const SizedBox(height: AppThemeConstants.spacing8),
             _SummaryCard(
+              title: 'Total Profit',
+              value: 'LKR ${summary.totalProfit.toStringAsFixed(2)}',
+              subtitle: 'Margin: ${summary.profitMarginPercentage.toStringAsFixed(1)}%\nSales: LKR ${summary.totalSalesProfit.toStringAsFixed(0)} | Repairs: LKR ${summary.totalRepairProfit.toStringAsFixed(0)}',
+              icon: Icons.trending_up,
+              color: theme.colorScheme.primary,
+            ),
+            const SizedBox(height: AppThemeConstants.spacing8),
+            _SummaryCard(
               title: 'Total Transactions',
               value: summary.totalTransactions.toString(),
               icon: Icons.receipt_long_outlined,
@@ -207,10 +215,11 @@ class _SummaryTab extends ConsumerWidget {
 class _SummaryCard extends StatelessWidget {
   final String title;
   final String value;
+  final String? subtitle;
   final IconData icon;
   final Color color;
 
-  const _SummaryCard({super.key, required this.title, required this.value, required this.icon, required this.color});
+  const _SummaryCard({super.key, required this.title, required this.value, this.subtitle, required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -223,9 +232,19 @@ class _SummaryCard extends StatelessWidget {
           child: Icon(icon, color: color),
         ),
         title: Text(title, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: AppThemeConstants.spacing4),
-          child: Text(value, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: AppThemeConstants.spacing4),
+              child: Text(value, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+            ),
+            if (subtitle != null)
+              Padding(
+                padding: const EdgeInsets.only(top: AppThemeConstants.spacing4),
+                child: Text(subtitle!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+              ),
+          ],
         ),
       ),
     );
@@ -285,6 +304,17 @@ class _SalesBreakdownTab extends ConsumerWidget {
               ),
             )),
             if (data.topSellingByRevenue.isEmpty) Padding(padding: const EdgeInsets.only(bottom: AppThemeConstants.spacing16), child: Text('No items sold.', style: theme.textTheme.bodyMedium)),
+
+            const SizedBox(height: AppThemeConstants.spacing16),
+            const _SectionHeader('Top 5 Items (by Profit)'),
+            ...data.topSellingByProfit.map((e) => Card(
+              margin: const EdgeInsets.only(bottom: AppThemeConstants.spacing8),
+              child: ListTile(
+                title: Text(e.itemName, style: theme.textTheme.titleMedium),
+                trailing: Text('LKR ${e.totalProfit.toStringAsFixed(2)}', style: theme.textTheme.titleMedium?.copyWith(color: AppTheme.successColor, fontWeight: FontWeight.bold)),
+              ),
+            )),
+            if (data.topSellingByProfit.isEmpty) Padding(padding: const EdgeInsets.only(bottom: AppThemeConstants.spacing16), child: Text('No items sold.', style: theme.textTheme.bodyMedium)),
           ],
         );
       },

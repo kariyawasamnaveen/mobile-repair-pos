@@ -16,6 +16,8 @@ class DashboardSummary {
   final double totalOwedToSuppliers;
   final int lowStockItemsCount; // snapshot
   final double totalDiscounts; // new field
+  final double totalSalesProfit;
+  final double totalRepairProfit;
   
   const DashboardSummary({
     required this.totalSalesRevenue,
@@ -26,18 +28,26 @@ class DashboardSummary {
     required this.totalOwedToSuppliers,
     required this.lowStockItemsCount,
     required this.totalDiscounts,
+    required this.totalSalesProfit,
+    required this.totalRepairProfit,
   });
+
+  double get totalProfit => totalSalesProfit + totalRepairProfit;
+  double get totalRevenue => totalSalesRevenue + totalRepairRevenue;
+  double get profitMarginPercentage => totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0.0;
 }
 
 class SalesBreakdown {
   final Map<String, double> revenueByMethod;
   final List<ItemSales> topSellingByQuantity;
   final List<ItemSales> topSellingByRevenue;
+  final List<ItemProfit> topSellingByProfit;
   
   const SalesBreakdown({
     required this.revenueByMethod,
     required this.topSellingByQuantity,
     required this.topSellingByRevenue,
+    required this.topSellingByProfit,
   });
 }
 
@@ -50,6 +60,16 @@ class ItemSales {
     required this.itemName,
     required this.totalQuantity,
     required this.totalRevenue,
+  });
+}
+
+class ItemProfit {
+  final String itemName;
+  final double totalProfit;
+  
+  const ItemProfit({
+    required this.itemName,
+    required this.totalProfit,
   });
 }
 
