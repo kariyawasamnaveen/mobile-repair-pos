@@ -20,7 +20,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration {
@@ -131,6 +131,10 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(discountRules);
           }
           try { await m.addColumn(sales, sales.appliedDiscountRuleName); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
+        }
+        if (from < 14) {
+          try { await m.addColumn(saleItems, saleItems.purchasePriceAtSale); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
+          try { await m.addColumn(repairJobParts, repairJobParts.purchasePriceAtUsage); } catch (e) { if (!e.toString().contains('duplicate column')) rethrow; }
         }
       },
       beforeOpen: (details) async {
