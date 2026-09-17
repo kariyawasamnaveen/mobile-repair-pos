@@ -20,6 +20,7 @@ import 'package:pos_system/features/auth/data/activity_log_repository.dart';
 import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/core/theme/app_theme.dart';
 import 'package:pos_system/features/settings/presentation/discount_rules_screen.dart';
+import 'package:pos_system/features/subscription/domain/subscription_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -422,6 +423,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         );
                       },
                     ),
+                  ),
+                ),
+                const SizedBox(height: AppThemeConstants.spacing12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Force Refresh Subscription Status (Debug)'),
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final isActive = await ref.read(subscriptionServiceProvider).isSubscriptionActive(forceRefresh: true);
+                      if (!mounted) return;
+                      messenger.showSnackBar(
+                        SnackBar(content: Text('Subscription re-checked. Active: $isActive')),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: AppThemeConstants.spacing24),

@@ -19,7 +19,7 @@ class SubscriptionService {
 
   SubscriptionService(this._settingsRepository, this._supabase, {Future<DateTime?> Function(String bizId)? fetchRemoteExpiryOverride}) : _fetchRemoteExpiryOverride = fetchRemoteExpiryOverride;
 
-  Future<bool> isSubscriptionActive() async {
+  Future<bool> isSubscriptionActive({bool forceRefresh = false}) async {
     try {
       final bizIdRes = await _settingsRepository.getBusinessAccountId();
       final bizId = bizIdRes.isRight() ? bizIdRes.getRight().toNullable() : null;
@@ -35,7 +35,7 @@ class SubscriptionService {
       final lastCheck = lastCheckRes.isRight() ? lastCheckRes.getRight().toNullable() : null;
       
       bool needsNetworkCheck = true;
-      if (lastCheck != null && now.difference(lastCheck).inHours < 24) {
+      if (!forceRefresh && lastCheck != null && now.difference(lastCheck).inHours < 24) {
         needsNetworkCheck = false;
       }
 
@@ -79,15 +79,27 @@ class SubscriptionService {
       final cachedExpiry = cachedExpiryRes.isRight() ? cachedExpiryRes.getRight().toNullable() : null;
 
       if (cachedExpiry == null) {
+        developer.log('Subscription Status: No cached data -> false');
         return false; // No cached data, assume inactive
       }
 
       // 7-day grace period for offline
       if (lastCheck != null && now.difference(lastCheck).inDays >= 7) {
+        developer.log('Subscription Status: Grace period expired -> false');
         return false; 
       }
 
-      return now.isBefore(cachedExpiry);
+      final result = now.isBefore(cachedExpiry);
+      developer.log('''
+=== SUBSCRIPTION STATUS CHECK ===
+Current Time: $now
+Last Check Date: $lastCheck
+Cached Expiry Date: $cachedExpiry
+Needs Network Check (Force=$forceRefresh): $needsNetworkCheck
+Final Result: $result
+=================================''');
+
+      return result;
     } catch (e) {
        developer.log('Error evaluating subscription status', name: 'SubscriptionService', error: e);
        return false;
