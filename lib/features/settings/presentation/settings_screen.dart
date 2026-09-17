@@ -403,6 +403,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   },
                 ),
                 const SizedBox(height: AppThemeConstants.spacing24),
+                
+                Text('Business Account', style: theme.textTheme.titleMedium),
+                const SizedBox(height: AppThemeConstants.spacing12),
+                Card(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  child: ListTile(
+                    leading: Icon(Icons.business, color: theme.colorScheme.primary),
+                    title: Text(settings.businessAccountId ?? 'Not Set', style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                    subtitle: const Text('Business Account ID (Used for Support & Subscriptions)'),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.copy),
+                      tooltip: 'Copy to Clipboard',
+                      onPressed: settings.businessAccountId == null ? null : () {
+                        Clipboard.setData(ClipboardData(text: settings.businessAccountId!));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Business Account ID copied to clipboard')),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppThemeConstants.spacing24),
               ],
               Text('Store Profile', style: theme.textTheme.titleMedium),
               const SizedBox(height: AppThemeConstants.spacing12),

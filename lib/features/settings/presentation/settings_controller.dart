@@ -13,6 +13,7 @@ class StoreSettings {
   final String? taxName;
   final double? taxRate;
   final bool? isTaxInclusive;
+  final String? businessAccountId;
 
   const StoreSettings({
     this.name, 
@@ -25,6 +26,7 @@ class StoreSettings {
     this.taxName,
     this.taxRate,
     this.isTaxInclusive,
+    this.businessAccountId,
   });
 
   StoreSettings copyWith({
@@ -108,6 +110,10 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
     final taxInclusiveRes = await _repository.getSetting('is_tax_inclusive');
     taxInclusiveRes.match((_) {}, (val) => isTaxInclusive = val == 'true');
 
+    final bizIdRes = await _repository.getBusinessAccountId();
+    String? businessAccountId;
+    bizIdRes.match((_) {}, (val) => businessAccountId = val);
+
     state = AsyncValue.data(StoreSettings(
       name: name,
       address: address,
@@ -119,6 +125,7 @@ class StoreSettingsNotifier extends StateNotifier<AsyncValue<StoreSettings>> {
       taxName: taxName ?? 'VAT',
       taxRate: taxRate ?? 0.0,
       isTaxInclusive: isTaxInclusive ?? false,
+      businessAccountId: businessAccountId,
     ));
   }
 
