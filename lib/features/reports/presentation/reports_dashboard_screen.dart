@@ -6,6 +6,7 @@ import 'package:pos_system/features/reports/domain/pdf_report_generator.dart';
 import 'package:printing/printing.dart';
 import 'package:pos_system/core/theme/app_theme.dart';
 import 'package:pos_system/features/reports/presentation/combined_reports_screen.dart';
+import 'package:file_picker/file_picker.dart';
 
 class ReportsDashboardScreen extends ConsumerStatefulWidget {
   const ReportsDashboardScreen({super.key});
@@ -27,19 +28,56 @@ class _ReportsDashboardScreenState extends ConsumerState<ReportsDashboardScreen>
           title: const Text('Reports'),
           actions: [
             IconButton(
-              icon: const Icon(Icons.picture_as_pdf_outlined),
-              tooltip: 'Generate Monthly Report',
+              icon: const Icon(Icons.download_rounded),
+              tooltip: 'Download PDF',
               onPressed: () async {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Generating PDF Report...')));
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
+                scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Generating PDF Report...')));
                 final res = await ref.read(pdfReportGeneratorProvider).generateMonthlyReport(DateTime.now());
                 if (mounted) {
                   res.fold(
-                    (l) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.message))),
+                    (l) => scaffoldMessenger.showSnackBar(SnackBar(content: Text(l.message))),
                     (bytes) async {
-                      await Printing.layoutPdf(
-                        onLayout: (_) => bytes,
-                        name: 'Monthly_Report_${DateTime.now().toIso8601String().split('T').first}.pdf',
-                      );
+                      try {
+                        Uri? outputFile = await FilePicker.saveFile(
+                          dialogTitle: 'Save Report',
+                          fileName: 'Monthly_Report_${DateTime.now().toIso8601String().split('T').first}.pdf',
+                          type: FileType.custom,
+                          allowedExtensions: ['pdf'],
+                          bytes: bytes,
+                        );
+                        if (outputFile != null && mounted) {
+                          scaffoldMessenger.showSnackBar(SnackBar(content: Text('Report saved to ${outputFile.path}'), backgroundColor: Colors.green));
+                        }
+                      } catch (e) {
+                        if (mounted) scaffoldMessenger.showSnackBar(SnackBar(content: Text('Failed to save file: $e'), backgroundColor: Colors.red));
+                      }
+                    },
+                  );
+                }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.print_rounded),
+              tooltip: 'Print PDF',
+              onPressed: () async {
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
+                scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Generating PDF Report...')));
+                final res = await ref.read(pdfReportGeneratorProvider).generateMonthlyReport(DateTime.now());
+                if (mounted) {
+                  res.fold(
+                    (l) => scaffoldMessenger.showSnackBar(SnackBar(content: Text(l.message))),
+                    (bytes) async {
+                      try {
+                        await Printing.layoutPdf(
+                          onLayout: (_) => bytes,
+                          name: 'Monthly_Report_${DateTime.now().toIso8601String().split('T').first}.pdf',
+                        );
+                      } catch (e) {
+                        if (mounted) {
+                          scaffoldMessenger.showSnackBar(const SnackBar(content: Text('No printer found - check your printer is connected'), backgroundColor: Colors.red));
+                        }
+                      }
                     },
                   );
                 }

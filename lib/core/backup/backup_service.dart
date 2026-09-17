@@ -13,6 +13,7 @@ import 'package:pos_system/core/backup/backup_encryption_service.dart';
 import 'package:pos_system/core/backup/storage_path_builder.dart';
 import 'dart:convert';
 import 'package:pos_system/core/backup/backup_models.dart';
+import 'package:pos_system/features/subscription/domain/subscription_service.dart';
 import 'package:pos_system/features/reports/data/reports_repository.dart';
 import 'package:pos_system/features/reports/domain/reports_models.dart';
 import 'package:pos_system/features/settings/data/branch_repository.dart';
@@ -26,6 +27,7 @@ final backupServiceProvider = Provider<BackupService>((ref) {
     Supabase.instance.client,
     ref.watch(reportsRepositoryProvider),
     ref.watch(branchRepositoryProvider),
+    ref.watch(subscriptionServiceProvider),
   );
 });
 
@@ -36,13 +38,18 @@ class BackupService {
   final SupabaseClient _supabase;
   final ReportsRepository _reportsRepo;
   final BranchRepository _branchRepo;
+  final SubscriptionService _subscriptionService;
   
   static const String _bucketName = 'backups';
 
-  BackupService(this._db, this._settingsRepository, this._encryptionService, this._supabase, this._reportsRepo, this._branchRepo);
+  BackupService(this._db, this._settingsRepository, this._encryptionService, this._supabase, this._reportsRepo, this._branchRepo, this._subscriptionService);
 
   Future<Either<Failure, void>> backupDatabase() async {
     try {
+      final isActive = await _subscriptionService.isSubscriptionActive();
+      if (!isActive) {
+        return Left(Failure('Subscription expired - contact support to renew'));
+      }
       final bizIdRes = await _settingsRepository.getBusinessAccountId();
       if (bizIdRes.isLeft() || bizIdRes.getRight().toNullable() == null) {
         return Left(Failure('Business Account ID not found. Please set it in Settings.'));

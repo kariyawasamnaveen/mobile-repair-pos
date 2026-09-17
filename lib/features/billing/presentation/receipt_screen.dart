@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pos_system/features/billing/domain/receipt_printer.dart';
 import 'package:pos_system/features/billing/domain/sale.dart';
 import 'package:pos_system/core/database/tables.dart';
 import 'package:pos_system/features/settings/presentation/settings_controller.dart';
 import 'package:pos_system/core/sms/sms_gateway.dart';
 import 'package:pos_system/features/billing/domain/sms_receipt_generator.dart';
+import 'package:pos_system/features/billing/domain/pdf_receipt_generator.dart';
+import 'package:printing/printing.dart';
 
 const String receiptFooterPolicy = "Items eligible for exchange within 7 days with this receipt";
 const String receiptFooterGreeting = "Thank you, visit again!";
@@ -19,7 +20,6 @@ class ReceiptScreen extends ConsumerStatefulWidget {
 }
 
 class _ReceiptScreenState extends ConsumerState<ReceiptScreen> {
-  final ReceiptPrinter _printer = LoggingReceiptPrinter();
   late final TextEditingController _phoneController;
   bool _isSendingSms = false;
 
@@ -55,9 +55,27 @@ class _ReceiptScreenState extends ConsumerState<ReceiptScreen> {
 
   void _printReceipt(BuildContext context, StoreSettings? settings) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    await _printer.printReceipt(widget.sale, storeName: settings?.name, storeAddress: settings?.address, storePhone: settings?.phone);
+    final generator = PdfReceiptGenerator();
+    final result = await generator.generateReceipt(widget.sale, settings);
+    
     if (mounted) {
-      scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Receipt sent to printer')));
+      result.fold(
+        (failure) {
+          scaffoldMessenger.showSnackBar(SnackBar(content: Text(failure.message), backgroundColor: Colors.red));
+        },
+        (bytes) async {
+          try {
+            await Printing.layoutPdf(
+              onLayout: (_) => bytes,
+              name: 'Receipt_${widget.sale.id.substring(0, 8)}.pdf',
+            );
+          } catch (e) {
+            if (mounted) {
+              scaffoldMessenger.showSnackBar(const SnackBar(content: Text('No printer found - check your printer is connected'), backgroundColor: Colors.red));
+            }
+          }
+        },
+      );
     }
   }
 

@@ -96,6 +96,38 @@ class SettingsRepository {
     return setSetting('last_backup_at', dt.toIso8601String());
   }
 
+  Future<Either<Failure, DateTime?>> getSubscriptionExpiryDate() async {
+    final res = await getSetting('subscription_expiry_date');
+    return res.fold(
+      (l) => Left(l),
+      (val) {
+        if (val == null || val.isEmpty) return const Right(null);
+        final dt = DateTime.tryParse(val);
+        return Right(dt);
+      }
+    );
+  }
+
+  Future<Either<Failure, Unit>> setSubscriptionExpiryDate(DateTime dt) async {
+    return setSetting('subscription_expiry_date', dt.toIso8601String());
+  }
+
+  Future<Either<Failure, DateTime?>> getLastSubscriptionCheckDate() async {
+    final res = await getSetting('last_subscription_check_date');
+    return res.fold(
+      (l) => Left(l),
+      (val) {
+        if (val == null || val.isEmpty) return const Right(null);
+        final dt = DateTime.tryParse(val);
+        return Right(dt);
+      }
+    );
+  }
+
+  Future<Either<Failure, Unit>> setLastSubscriptionCheckDate(DateTime dt) async {
+    return setSetting('last_subscription_check_date', dt.toIso8601String());
+  }
+
   Future<Either<Failure, String?>> getCurrentBranchId() async {
     return getSetting('current_branch_id');
   }

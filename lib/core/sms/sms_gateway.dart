@@ -6,10 +6,12 @@ import 'package:http/http.dart' as http;
 import 'package:pos_system/core/error/failure.dart';
 import 'dart:convert';
 
+import 'package:pos_system/features/subscription/domain/subscription_service.dart';
+
 /// Single switch point to swap SMS gateways.
 /// Change this to HttpSmsGateway when real API credentials are ready.
 final smsGatewayProvider = Provider<SmsGateway>((ref) {
-  return HttpSmsGateway();
+  return HttpSmsGateway(ref.watch(subscriptionServiceProvider));
 });
 
 abstract class SmsGateway {
@@ -20,11 +22,20 @@ abstract class SmsGateway {
 }
 
 class LoggingSmsGateway implements SmsGateway {
+  final SubscriptionService _subscriptionService;
+
+  LoggingSmsGateway(this._subscriptionService);
+
   @override
   Future<Either<Failure, void>> sendSms({
     required String toPhone,
     required String message,
   }) async {
+    final isActive = await _subscriptionService.isSubscriptionActive();
+    if (!isActive) {
+      return Left(Failure('Subscription expired - contact support to renew'));
+    }
+
     final buffer = StringBuffer();
     buffer.writeln('================ SMS NOTIFICATION STUB ================');
     buffer.writeln('Would send SMS to: $toPhone');
@@ -36,12 +47,21 @@ class LoggingSmsGateway implements SmsGateway {
 }
 
 class HttpSmsGateway implements SmsGateway {
+  final SubscriptionService _subscriptionService;
+
+  HttpSmsGateway(this._subscriptionService);
+
   @override
   Future<Either<Failure, void>> sendSms({
     required String toPhone,
     required String message,
   }) async {
     try {
+      final isActive = await _subscriptionService.isSubscriptionActive();
+      if (!isActive) {
+        return Left(Failure('Subscription expired - contact support to renew'));
+      }
+
       final apiUrl = dotenv.env['SMS_API_URL'];
       final userId = dotenv.env['SMS_USER_ID'];
       final apiKey = dotenv.env['SMS_API_KEY'];
