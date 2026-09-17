@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:pos_system/features/settings/presentation/settings_controller.dart';
 import 'package:pos_system/features/settings/presentation/branch_management_controller.dart';
@@ -426,21 +427,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: AppThemeConstants.spacing12),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Force Refresh Subscription Status (Debug)'),
-                    onPressed: () async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      final isActive = await ref.read(subscriptionServiceProvider).isSubscriptionActive(forceRefresh: true);
-                      if (!mounted) return;
-                      messenger.showSnackBar(
-                        SnackBar(content: Text('Subscription re-checked. Active: $isActive')),
-                      );
-                    },
+                if (kDebugMode)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Force Refresh Subscription Status (Debug)'),
+                      onPressed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final isActive = await ref.read(subscriptionServiceProvider).isSubscriptionActive(forceRefresh: true);
+                        if (!mounted) return;
+                        messenger.showSnackBar(
+                          SnackBar(content: Text('Subscription re-checked. Active: $isActive')),
+                        );
+                      },
+                    ),
                   ),
-                ),
                 const SizedBox(height: AppThemeConstants.spacing24),
               ],
               Text('Store Profile', style: theme.textTheme.titleMedium),
